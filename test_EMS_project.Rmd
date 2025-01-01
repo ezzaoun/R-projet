@@ -1,30 +1,246 @@
 ---
-title: "EMS_Project"
-output: html_document
-date: "2025-01-01"
+title: "Projet_commun"
+output: pdf_document
+date: "2024-11-04"
 ---
 
+```{css,echo=F}
+.badCode {
+background-color: #cfdefc; 
+}
+
+.corrO { background-color: rgb(255,238,237); }
+.corrS { background-color: pink; color: black; border: 1px solid red; }
+```
+
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo=TRUE,
+               cache=FALSE,
+               prompt=FALSE,
+               tidy=TRUE,
+               comment=NA,
+               message=FALSE,
+               warning=FALSE,
+               class.source="badCode")
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-library(tidyverse)
-# test pull ezz
+```{r,warning=F,message=F}
+library(ggplot2)
+library(gridExtra)
+library(reshape2)
+library(FactoMineR)
+library(factoextra)
+library(corrplot)
+library(forcats)
+library(mclust)
+library(cluster)
+library(ppclust)
+library(ggalluvial)
+library(klaR)
+library(gridExtra)
+library(reshape2)
+library(clusterSim)
 ```
 
-## Including Plots
+## Partie 1 - Analyse descriptivre du jeu de données
 
-You can also embed plots, for example:
+## Statistique descriptive
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+--- 
+Le jeu de données étudié possède 1615 génes et 36 variables qualitatives associées.
+Nous allons dans un premier temps afficher ce jeu de données.
+---
+```{r}
+Data = read.table("DataProjet.txt", header =T)
+knitr::kable(Data)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+---
+Nous allons ensuite afficher la distribution des mesures d'expression des génes pour les différents traitement, réplicat et temps.
+---
+```{r}
+options(max.print = 1000)
+summary(Data)
+```
+
+---
+On trace ensuite les corrélations entre les différentes variables
+---
+
+```{r}
+corrplot(cor(Data), method = "ellipse")
+# test
+```
+
+---
+On remarque un certain cadrillage qui se forme.
+Pour étudier pour en détaille ce graphique, on va extraire plusieurs partie de ce dernier et expliquer chacune d'entre elles :
+ - Extraction des corrélations liées à un traitement et une réplicat : Cette extraction permet de comparer la correlation entre les différentes heures. On prend l'exemple ici de T1 et R1.
+ - Extraction des corrélations liées aux même traitement : à compléter
+---
+
+```{r}
+# Première extraction
+corrplot(cor(Data[,1:6]), method = "ellipse")
+```
+
+---
+On remarque que plus les temps sont proches, plus les variables sont corrélées. Ce résultat s'explique par l'évolution temporelle d'une expérience. Plus le traitement agit longtemps sur le gène, plus le traitement aura un effet important sur le gène.
+On prend ici l'exemple de T1 et R1, cependant, on obtient le même résultat sur les autres traitement et les autres réplicats.
+---
+
+```{r}
+# Deuxième extraction
+corrplot(cor(Data)[c(1:6, 19:24), c(1:6, 19:24)], method = "ellipse") # pour le traitement 1
+corrplot(cor(Data[c(7:12, 25:30), c(7:12, 25:30)]), method = "ellipse") # pour le traitement 2
+corrplot(cor(Data[c(13:18, 31:36), c(13:18, 31:36)]), method = "ellipse") # pour le traitement 3
+
+# Corrélation entre les variables subissant le traitement T1 pour le réplicat R1 et le réplicat R2
+corrplot(cor(Data)[1:18, 19:36],method = "ellipse")
+corrplot(cor(Data)[19:36, 1:18], method = "ellipse")
+```
+
+---
+On remarque qu'entre les différents réplicats, les variables ayant le même traitement et la même heure, sont plutôt corrélé entre eux. 
+On peut donc remarqué une corrélation importante entre les deux réplicat. Ainsi, une expérience produite deux fois renvoit des résultats qui sont corrélés entre eux.
+On remarque cependant que le traitement 1 a des résultats moins corrélé entre la première et la deuxième expérience que le traitement 2 et 3. 
+Pour le traitement 2, on remarque de les résultats sont plus corrélé à la fin de l'expérience (quasi égale à 1) que au début, cela signifie que les deux expériences amène au résultat mais ont une vitesse de réaction au traitement différents.
+Pour le traitement 3, on remarque que le corrélation sont toutes très proches de 1, cela signifie que les 2 expriences ont une vitesse égale et donc que le traitement à une probalité d'efficaté plus important que les deux précédents.
+---
+```{r}
+ggplot(melt(Data), aes(x = variable, y = value)) + geom_boxplot() + labs(title = "Boxplot des données mises à l'échelle", x = "Variable", y = "Valeur (échelle standardisée)") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+#c'est pas assez informatif
+#pour avoir une meilleure representation, on fait un violin plot
+```
+D’abord, on observe une distinction nette entre les réplicats R1 et R2, témoignant d’une périodicité dans les valeurs d'expression. Ce phénomène s'explique par le fait que les mêmes gènes sont soumis aux mêmes traitements et conditions pour chaque réplicat, bien que des variations aléatoires introduisent de légères différences.
+
+Les boxplots révèlent trois groupes distincts correspondant aux traitements T1, T2, et T3. Pour le traitement T1, les médianes sont proches de 0, indiquant une faible réaction des gènes. En revanche, sous le traitement T2, les médianes montrent une tendance à s’éloigner de 0, suggérant une réponse progressive des gènes. Le traitement T3, combinaison de T1 et T2, montre des profils similaires à T2, ce qui laisse penser que T2 domine dans l’effet global du mélange et induit une réaction notable.
+
+Ces observations s’appliquent de manière presque symétrique aux deux réplicats, illustrant leur homogénéité générale.
+
+## Analyse des variables T_t s_H R_r
+```{r}
+# transformation du tableau 
+transData = t(Data)
+knitr::kable(transData)
+```
+
+```{r}
+# ACP sur les variables : transposée du tableau
+respca<-PCA(transData, scale.unit = T, graph=F)
+
+fviz_pca_ind(respca, 
+             #geom = "point", 
+             col.ind = "cos2", # Coloration selon la qualité de représentation
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE,
+             title = "Projection des gènes dans l'espace des composantes principales")
+
+fviz_pca_var(respca, 
+             col.var = "contrib", 
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+             title = "Projection des variables dans l'espace des composantes principales")
+
+fviz_eig(respca)
+```
+
+
+```{r}
+reskmeans<-kmeans(transData,centers = 3)
+fviz_cluster(reskmeans,transData,ellipse.type = "norm")
+fviz_pca_ind(respca,col.ind=as.factor(reskmeans$cluster))
+```
+on peut voir une séparation en 3 classes distinguées
+En analysant ces classes, on peut voir qu'une premiere classe contient les tests qu'on a fait avec T1 sur R1 et R2, ainsi que certains tests avec T2 et T3 à des heures avancées (
+```{r}
+# courbe du coude
+set.seed(1234)
+Kmax<-10
+reskmeanscl<-matrix(0,nrow=nrow(transData),ncol=Kmax-1)
+Iintra<-NULL
+for (k in 2:Kmax){
+  resaux<-kmeans(transData,centers=k)
+  reskmeanscl[,k-1]<-resaux$cluster
+  Iintra<-c(Iintra,resaux$tot.withinss)
+}
+
+df<-data.frame(K=2:10,Iintra=Iintra)
+ggplot(df,aes(x=K,y=Iintra))+geom_line()+geom_point()+xlab("Nombre de classes")+ylab("Inertie intraclasse")
+# on peut voir qu'on a entre 3 ou 4 classes, ce qui est attendu vu le graphe de projection des individus de l'ACP
+```
+
+
+```{r}
+# Silouhette
+Silhou<-NULL
+for (k in 2:Kmax){
+   aux<-silhouette(reskmeanscl[,k-1], dist(transData))
+   Silhou<-c(Silhou,mean(aux[,3]))
+}
+
+df<-data.frame(K=2:Kmax,Silhouette=Silhou)
+ggplot(df,aes(x=K,y=Silhouette))+
+  geom_point()+
+  geom_line()+theme(legend.position = "bottom")
+
+aux<-silhouette(reskmeanscl[,2],dist(transData))
+fviz_silhouette(aux)+theme(plot.title = element_text(size =9))
+rm(df,Silhou,aux)
+```
+
+
+```{r}
+hward<-hclust(dist(transData),method = "ward.D2")
+CH<-NULL
+Kmax<-20
+for (k in 2:Kmax){
+  CH<-c(CH,index.G1(transData,cutree(hward,k)))
+}
+daux<-data.frame(NbClust=2:Kmax,CH=CH)
+ggplot(daux,aes(x=NbClust,y=CH))+geom_line()+geom_point()
+
+ClustCH<-cutree(hward,k=2)
+fviz_dend(hward,k=2,show_labels = FALSE,rect = TRUE, rect_fill = TRUE,palette = "npg",rect_border = "npg",
+labels_track_height = 0.8)+ggtitle("")
+fviz_pca_ind(respca,geom=c("point"),col.ind=as.factor(ClustCH))
+```
+
+)
+## Partie ACP Variables
+```{r}
+# ACP sur les individus
+pca_result_var <- PCA(Data, scale.unit = T, graph = F)
+
+# Visualisation des variables
+fviz_pca_var(pca_result_var, col.var = "cos2", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"))
+
+pca_result_var$var$cos2
+fviz_eig(pca_result_var)
+pca_result_var$eig
+```
+
+---
+Analyse en composantes principales Variables (ACP)
+
+Les variables les plus corrélées apparaissent proches dans ce plan. Par exemple :
+Des heures consécutives pour le même traitement se regroupent, confirmant leur similarité.
+Des variables éloignées (traitements ou réplicats différents) montrent des variations importantes dues à des effets spécifiques.
+Les couleurs (cos2) permettent de voir l'importance de chaque variable pour expliquer la variance : Des variables ayant un cos2 élevé sur l'axe PC1 ou PC2 contribuent fortement à ces composantes.
+---
+
+## Partie ACP des individus
+```{r}
+# Exécution de l'ACP sur les individus
+pca_result_ind <- PCA(Data, scale.unit = F, graph = F)
+
+# Visualisation des individus en fonction du cos2
+fviz_pca_ind(pca_result_ind, col.ind = "cos2", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"))
+fviz_eig(pca_result_ind)
+pca_result_ind$var$cos2
+
+```
+
+---
+ Les points proches les uns des autres représentent les gènes similaires, tandis que les points éloignés indiquent des différences importantes entre eux. La coloration des points selon leur cos2 permet de visualiser la qualité de leur projection dans cet espace, avec des couleurs chaudes indiquant une meilleure représentation.
+---
