@@ -301,22 +301,29 @@ knitr::kable(matrix)
 ```
 
 ```{r}
-boxplot(matrix$Y~matrix$temps, data =matrix)
-```
-
-```{r}
+# Modèle ANCOVA à 2 facteur avec intéraction
 ML <- lm(matrix$Y~matrix$traitement*matrix$temps, data = matrix)
 summary(ML)
-```
-```{r}
-plot(matrix$Y~matrix$temps)
-```
-```{r}
-ggplot(matrix,aes(x=matrix$temps,y=matrix$Y))+ 
-  geom_point(aes(shape=matrix$traitement,col=matrix$traitement)) 
+boxplot(matrix$Y~matrix$traitement*matrix$temps, data =matrix)
 ```
 
 ```{r}
-M1 <- lm(matrix$Y~matrix$traitement*matrix$temps, data = matrix)
-summary(M1)
+# Modèle ANCOVA à 2 facteur sans intéractions
+ML_sans_interaction = lm(matrix$Y~matrix$traitement+matrix$temps, data = matrix)
+summary(ML_sans_interaction)
+boxplot(matrix$Y~matrix$traitement+matrix$temps, data =matrix)
 ```
+
+---
+On commence à tester l'hypothèse de non-intéraction entre le facteur traitement et le variable temps.
+---
+
+```{r}
+# Comparaison du modèle ANCOVA avec intéractions et sans intéractions
+anova(ML, ML_sans_interaction)
+```
+
+---
+La p-valeur observée est inférieur à 5% (1.426e-15 < 0.05). On rejette donc l'hypothèse de nullité des intéractions.
+On conclut donc la présence d'intéraction dans le modèle; tester l'absence de facteur traitement et de variable temps n'a donc pas d'intéret, car toute variable constituant une interaction doit apparaître dans le modèle.
+---
