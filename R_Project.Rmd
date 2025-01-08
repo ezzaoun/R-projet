@@ -246,5 +246,77 @@ pca_result_ind$var$cos2
 ```
 
 ---
- Les points proches les uns des autres représentent les gènes similaires, tandis que les points éloignés indiquent des différences importantes entre eux. La coloration des points selon leur cos2 permet de visualiser la qualité de leur projection dans cet espace, avec des couleurs chaudes indiquant une meilleure représentation.
+Les points proches les uns des autres représentent les gènes similaires, tandis que les points éloignés indiquent des différences importantes entre eux. La coloration des points selon leur cos2 permet de visualiser la qualité de leur projection dans cet espace, avec des couleurs chaudes indiquant une meilleure représentation.
 ---
+
+## Nouvelle partie - Etude des différences entre les deux réplicats
+
+---
+Les lois de probabilité associés aux valeurs observées pour les deux réplicats sont elles significativement différentes ? Même question en se concentrant sur chaque traitement pris séparément. --> Réponses à partir du cours de janvier
+---
+
+---
+Consigne : Etudier l'effet combiné du temps et du traitement sur la différence des réplicats à l'aide d'un modèle linéaire
+---
+
+```{r}
+# Etape 1 : On effectue la différence des réplicats
+p = ncol(Data)
+#ncol(Data[,1:(p/2)])
+#ncol(Data[,(p/2 + 1):p])
+Data_Diff_R = Data[,1:(p/2)] - Data[,((p/2) + 1):p]
+colnames(Data_Diff_R) <- sub("_[^_]*$", "", colnames(Data[,1:(p/2)]))
+knitr::kable(Data_Diff_R)
+```
+
+```{r}
+#Etape 2 : Création de Yij de telle sorte que Y_ij = Y_tsg (l'ordre est traitement, temps et gènes)
+Y = as.vector(as.matrix(Data_Diff_R))
+```
+
+```{r}
+#Etape 3 : Création des noms de lignes du vecteur Y
+noms_Y <- outer(colnames(Data_Diff_R), rownames(Data_Diff_R), paste, sep="_")
+noms_Y <- as.vector(t(noms_Y))
+
+# Vérification des dimensions
+length(noms_Y)
+length(Y)
+
+#Etape 4 : Création du vecteur traitement et temps
+traitement <- sub("_.*", "", noms_Y)
+temps <- as.numeric(sapply(strsplit(noms_Y, "[_h]"), function(x) x[2]))
+
+# Etape 5 : Création du tableau pour le modèle linéaire
+matrix = as.data.frame(cbind(Y, traitement, temps))
+matrix$temps <- as.numeric(matrix$temps)
+matrix$Y <- as.numeric(matrix$Y)
+
+
+```
+
+```{r}
+rownames(matrix) <- noms_Y
+knitr::kable(matrix)
+```
+
+```{r}
+boxplot(matrix$Y~matrix$temps, data =matrix)
+```
+
+```{r}
+ML <- lm(matrix$Y~matrix$traitement*matrix$temps, data = matrix)
+summary(ML)
+```
+```{r}
+plot(matrix$Y~matrix$temps)
+```
+```{r}
+ggplot(matrix,aes(x=matrix$temps,y=matrix$Y))+ 
+  geom_point(aes(shape=matrix$traitement,col=matrix$traitement)) 
+```
+
+```{r}
+M1 <- lm(matrix$Y~matrix$traitement*matrix$temps, data = matrix)
+summary(M1)
+```
