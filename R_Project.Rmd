@@ -314,6 +314,50 @@ summary(ML_sans_interaction)
 boxplot(matrix$Y~matrix$traitement+matrix$temps, data =matrix)
 ```
 
+```{r}
+# Courbes d'interactions
+library(ggplot2)
+library(gridExtra)
+
+# Modèle sans interaction
+M_non_interaction <- lm(Y ~ traitement + temps, data = matrix)
+
+# Modèle avec interaction
+M_interaction <- lm(Y ~ traitement * temps, data = matrix)
+
+# Création des nouvelles données pour prédiction
+new_data <- expand.grid(
+  traitement = unique(matrix$traitement),
+  temps = seq(min(matrix$temps), max(matrix$temps), length.out = 100)
+)
+
+# Prédictions
+new_data$Y_non_interaction <- predict(M_non_interaction, newdata = new_data)
+new_data$Y_interaction <- predict(M_interaction, newdata = new_data)
+
+# Graphique pour le modèle sans interaction
+plot_non_interaction <- ggplot(new_data, aes(x = temps, y = Y_non_interaction, color = traitement)) +
+  geom_line(size = 1) +
+  labs(title = "Modèle sans interaction",
+       x = "Temps",
+       y = "Valeurs prédites de Y",
+       color = "Traitement") +
+  theme_minimal()
+
+# Graphique pour le modèle avec interaction
+plot_interaction <- ggplot(new_data, aes(x = temps, y = Y_interaction, color = traitement)) +
+  geom_line(size = 1) +
+  labs(title = "Modèle avec interaction",
+       x = "Temps",
+       y = "Valeurs prédites de Y",
+       color = "Traitement") +
+  theme_minimal()
+
+# Affichage côte à côte
+grid.arrange(plot_non_interaction, plot_interaction, ncol = 2)
+```
+Dans le modèle sans interaction, les courbes sont parallèles, reflétant l'absence d'interdépendance entre le traitement et le temps. En revanche, dans le modèle avec interaction, les courbes montrent des variations de pente ou des croisements, indiquant une interaction significative entre ces deux variables. À partir de ces deux représentations, un test de sous-modèle est effectué pour déterminer si l'interaction doit être conservée dans le modèle final.
+
 ---
 On commence à tester l'hypothèse de non-intéraction entre le facteur traitement et le variable temps.
 ---
@@ -327,3 +371,149 @@ anova(ML, ML_sans_interaction)
 La p-valeur observée est inférieur à 5% (1.426e-15 < 0.05). On rejette donc l'hypothèse de nullité des intéractions.
 On conclut donc la présence d'intéraction dans le modèle; tester l'absence de facteur traitement et de variable temps n'a donc pas d'intéret, car toute variable constituant une interaction doit apparaître dans le modèle.
 ---
+
+
+---
+Consigne : Peut-on prévoir l’expression des gènes à 6h à partir de celle observée à 1h et du traitement
+considéré ? Commenter la qualité de l’ajustement et la visualiser graphiquement.
+---
+
+```{r}
+# extraire les Y à 1h et créer une matrice
+p = ncol(Data)
+Data_moy_R = (Data[,1:(p/2)] + Data[,((p/2) + 1):p])/2
+Data_moy_R_1h = Data_moy_R[,c(1,7,13)]
+Data_moy_R_6h = Data_moy_R[,c(6,12,18)]
+
+colnames(Data_moy_R_1h) <- sub("_[^_]*$", "", colnames(Data_moy_R_1h))
+#knitr::kable(Data_moy_R_1h)
+
+colnames(Data_moy_R_6h) <- sub("_[^_]*$", "", colnames(Data_moy_R_6h))
+#knitr::kable(Data_moy_R_6h)
+
+Y_moy_1h = as.vector(as.matrix(Data_moy_R_1h))
+Y_moy_6h = as.vector(as.matrix(Data_moy_R_6h))
+
+#Etape 3 : Création des noms de lignes du vecteur Y
+noms_Y <- outer(colnames(Data_moy_R_1h), rownames(Data_moy_R_1h), paste, sep="_")
+noms_Y <- as.vector(t(noms_Y))
+
+#Etape 4 : Création du vecteur traitement et temps
+traitement <- sub("_.*", "", noms_Y)
+
+# Etape 5 : Création du tableau pour le modèle linéaire
+matrixMoy = as.data.frame(cbind(Y_moy_6h, Y_moy_1h, traitement))
+matrixMoy$Y_moy_1h <- as.numeric(matrixMoy$Y_moy_1h)
+matrixMoy$Y_moy_6h <- as.numeric(matrixMoy$Y_moy_6h)
+
+knitr::kable(matrixMoy)
+```
+
+
+```{r}
+ggplot(matrixMoy,aes(x=Y_moy_1h,y=Y_moy_6h))+ 
+  geom_point(aes(shape=traitement,col=traitement)) 
+
+ggplot(matrixMoy, aes(x = Y_moy_1h, y = Y_moy_6h, color = traitement)) +
+  geom_point(aes(shape = traitement)) +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, linetype = "dashed") +
+  geom_smooth(method = "lm", formula = y ~ x * traitement, se = FALSE) +
+  labs(title = "Relation entre Y_moy_1h et Y_moy_6h",
+       x = "Y_moy_1h",
+       y = "Y_moy_6h")
+
+```
+
+
+
+
+```{r}
+M_1h_to_6h <- lm(Y_moy_6h~Y_moy_1h*traitement, data = matrixMoy)
+summary(M_1h_to_6h)
+# tracer les courbes des valeurs predites vs les valeurs observées
+# calculer les theta chapeau pour voir la difference (courbe residuals)
+```
+
+
+```{r}
+#par(mfrow = c(2, 2))
+plot(M_1h_to_6h)
+```
+
+
+```{r}
+M_1h_to_6h_no_inter <- lm(Y_moy_6h ~ Y_moy_1h + traitement, data = matrixMoy)
+anova(M_1h_to_6h_no_inter, M_1h_to_6h)
+```
+le test indique que l’ajout de l’interaction améliore significativement le modèle (p-valeur < 0.05), cela suggère que :
+- L’effet de Y_1h sur Y_6h varie selon les traitements.
+- L’interaction entre Y_1h et le traitement est pertinente.
+
+### Conclusion
+Le modèle ajusté montre une qualité d'ajustement modérée, avec un R2R2 de 27.06%, indiquant que 27% de la variance de Y6hY6h​ est expliquée par Y1hY1h​ et le traitement. Les termes d’interaction entre Y1hY1h​ et le traitement sont hautement significatifs (p<2e−16p<2e−16), ce qui montre que l’effet de Y1hY1h​ sur Y6hY6h​ varie selon le traitement. Les graphiques des résidus confirment que les hypothèses de linéarité et de normalité sont globalement respectées, bien que le modèle laisse une part importante de la variance inexpliquée. Cela suggère que Y1hY1h​ et les traitements contribuent à l’évolution temporelle de Y6hY6h​, mais d’autres facteurs pourraient être impliqués.
+
+---
+Consigne : Reprendre la question précédente en remplaçant 1h par 3h et comparer les résultats obtenus dans
+les deux cas.
+---
+```{r}
+p = ncol(Data)
+
+Data_moy_R_3h = Data_moy_R[,c(3,9,15)]
+
+colnames(Data_moy_R_3h) <- sub("_[^_]*$", "", colnames(Data_moy_R_3h))
+#knitr::kable(Data_moy_R_3h)
+
+Y_moy_3h = as.vector(as.matrix(Data_moy_R_3h))
+
+#Etape 4 : Création du vecteur traitement et temps
+traitement <- sub("_.*", "", noms_Y)
+
+# Etape 5 : Création du tableau pour le modèle linéaire
+matrixMoy2 = as.data.frame(cbind(Y_moy_6h, Y_moy_3h, traitement))
+matrixMoy2$Y_moy_6h <- as.numeric(matrixMoy2$Y_moy_6h)
+matrixMoy2$Y_moy_3h <- as.numeric(matrixMoy2$Y_moy_3h)
+
+knitr::kable(matrixMoy2)
+```
+
+
+```{r}
+ggplot(matrixMoy2, aes(x = Y_moy_3h, y = Y_moy_6h, color = traitement)) +
+  geom_point(aes(shape = traitement)) +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, linetype = "dashed") +
+  geom_smooth(method = "lm", formula = y ~ x * traitement, se = FALSE) +
+  labs(title = "Relation entre Y_moy_6h et Y_moy_3h",
+       x = "Y_moy_3h",
+       y = "Y_moy_6h")
+```
+
+
+```{r}
+M_3h_to_6h <- lm(Y_moy_6h~Y_moy_3h*traitement, data = matrixMoy2)
+summary(M_3h_to_6h)
+```
+    Modèle 3h :
+        Residual Standard Error (RSE) : 1.168
+        R² ajusté : 0.770
+        La variance expliquée est beaucoup plus élevée, indiquant que les prédictions du modèle pour les données à 3h sont nettement meilleures.
+
+Interprétation :
+Le modèle basé sur les données de 3h est nettement plus performant que celui de 1h, avec un R² ajusté presque trois fois supérieur et un RSE significativement plus faible. Cela signifie que les valeurs à 3h expliquent beaucoup mieux les valeurs à 6h.
+
+
+```{r}
+par(mfrow = c(2, 2))
+plot(M_3h_to_6h)
+```
+
+
+```{r}
+M_3h_to_6h_no_inter <- lm(Y_moy_6h ~ Y_moy_3h + traitement, data = matrixMoy2)
+anova(M_3h_to_6h_no_inter, M_3h_to_6h)
+```
+Les résultats montrent que les données de 3h offrent un ajustement beaucoup plus précis que celles de 1h. Cela est confirmé par :
+    - Une meilleure qualité de l'ajustement (RSE plus faible et R² ajusté plus élevé),
+    - Une réduction de RSS plus importante dans l'ANOVA,
+    - Une représentation graphique des résidus plus conforme aux hypothèses du modèle linéaire.
+Ainsi, pour prédire Ymoy_6hYmoy_6h​, les données de 3h sont plus adaptées que celles de 1h.
