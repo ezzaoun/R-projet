@@ -385,6 +385,33 @@ ggplot(Tab, aes(y = value, axis1 = clust1, axis2 = clust2)) +
 Les courbes obtenues comparent les résultats des algorithmes K-means et DBSCAN. Le tableau de comparaison montre les correspondances et divergences entre les clusters identifiés par les deux méthodes. Le diagramme visualise ces relations : des flux larges entre les clusters indiquent une forte correspondance, tandis que des petits flux correspondent à des divergences, comme des points considérés comme bruit par DBSCAN mais regroupés par K-means. 
 ---
 
+# Clustering Hiérarchique (HAC)
+
+```{r}
+# Couper l'arbre à un certain nombre de clusters
+k <- 2  # Par exemple, couper l'arbre pour obtenir 2 clusters
+clusters <- cutree(hclust_res, k)
+
+# Visualisation du dendrogramme avec les couleurs des clusters
+plot(hclust_res, main = "Dendrogramme avec 2 clusters")
+rect.hclust(hclust_res, k = k, border = "red")  # Ajouter des boîtes rouges autour des clusters
+
+```
+---
+Le dendrogramme montre que les groupes qui se fusionnent tôt sont très similaires, tandis que ceux qui se rejoignent plus tard présentent des différences plus marquées. On observe que le nombre optimal de clusters, égal à 2, est cohérent avec les résultats obtenus par DBSCAN et K-means. Cela suggère que les trois méthodes identifient une structure similaire dans les données, avec une séparation nette entre deux groupes principaux.
+---
+
+```{r}
+library(pheatmap)
+
+# Créer une heatmap avec dendrogramme
+pheatmap(Data[1:20, ], cluster_rows = TRUE, cluster_cols = TRUE, main = "Heatmap avec Dendrogramme sur les 20 premiers gènes")
+```
+
+---
+La heatmap des 20 premiers gènes montre l'expression des gènes à travers différentes conditions, avec des dendrogrammes qui regroupent les gènes et conditions selon leurs profils d'expression. 
+---
+
 ## Nouvelle partie - Etude des différences entre les deux réplicats
 
 ---
