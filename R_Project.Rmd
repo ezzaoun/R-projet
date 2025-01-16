@@ -211,42 +211,178 @@ fviz_pca_ind(respca,geom=c("point"),col.ind=as.factor(ClustCH))
 ```
 
 )
-## Partie ACP Variables
+## Analyse des individus Gènes
+# Partie ACP des individus
 ```{r}
-# ACP sur les individus
-pca_result_var <- PCA(Data, scale.unit = T, graph = F)
+# Exécution de l'ACP sur les individus (les gènes)
+pca_result_ind <- PCA(Data, scale.unit = FALSE, graph = FALSE)  # ACP sans mise à l'échelle
 
-# Visualisation des variables
-fviz_pca_var(pca_result_var, col.var = "cos2", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"))
-
-pca_result_var$var$cos2
-fviz_eig(pca_result_var)
-pca_result_var$eig
-```
-
----
-Analyse en composantes principales Variables (ACP)
-
-Les variables les plus corrélées apparaissent proches dans ce plan. Par exemple :
-Des heures consécutives pour le même traitement se regroupent, confirmant leur similarité.
-Des variables éloignées (traitements ou réplicats différents) montrent des variations importantes dues à des effets spécifiques.
-Les couleurs (cos2) permettent de voir l'importance de chaque variable pour expliquer la variance : Des variables ayant un cos2 élevé sur l'axe PC1 ou PC2 contribuent fortement à ces composantes.
----
-
-## Partie ACP des individus
-```{r}
-# Exécution de l'ACP sur les individus
-pca_result_ind <- PCA(Data, scale.unit = F, graph = F)
-
-# Visualisation des individus en fonction du cos2
+# Visualisation des individus (gènes) en fonction du cos2 pour évaluer la qualité de leur projection
 fviz_pca_ind(pca_result_ind, col.ind = "cos2", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"))
-fviz_eig(pca_result_ind)
+
+# Afficher les valeurs cos2 des individus pour analyser leur qualité de représentation
 pca_result_ind$var$cos2
 
+# Visualisation de l'inertie des axes principaux pour observer la variance expliquée
+fviz_eig(pca_result_ind)
 ```
 
 ---
-Les points proches les uns des autres représentent les gènes similaires, tandis que les points éloignés indiquent des différences importantes entre eux. La coloration des points selon leur cos2 permet de visualiser la qualité de leur projection dans cet espace, avec des couleurs chaudes indiquant une meilleure représentation.
+Le premier aspect qui se démarque est la formation de deux clusters distincts. Cela suggère que les gènes se regroupent en fonction de leur expression similaire sous les différentes conditions. Les points proches les uns des autres représentent des gènes ayant des profils d'expression similaires, tandis que les points éloignés indiquent des gènes présentant des différences notables dans leur expression. La coloration des points en fonction du cos2 permet de visualiser la qualité de la projection des gènes dans cet espace réduit, avec des couleurs chaudes signalant une meilleure représentation et une contribution plus forte à l'explication de la variance dans l'espace de faible dimension.
+---
+
+# Clustering sur les individus : K-means
+
+```{r}
+# Évolution de l'inertie intraclasse pour choisir le nombre optimal de clusters
+Kmax <- 15
+reskmeanscl <- matrix(0, nrow = nrow(Data), ncol = Kmax - 1)
+Iintra <- NULL
+
+# Calcul de l'inertie pour chaque nombre de clusters
+for (k in 1:Kmax) {
+  resaux <- kmeans(Data, k, nstart = 1)
+  reskmeanscl[, k - 1] <- resaux$cluster
+  Iintra <- c(Iintra, resaux$tot.withinss)
+}
+
+# Affichage de l’évolution de l’inertie en fonction du nombre de clusters
+df <- data.frame(K = 1:15, Iintra = Iintra)
+ggplot(df, aes(x = K, y = Iintra)) +
+  geom_line() +
+  geom_point() +
+  xlab("Nombre de clusters") +
+  ylab("Inertie intraclasse")
+
+```
+---
+L'inertie intra-classe diminue à mesure que le nombre de clusters augmente. Cependant, lorsque le nombre de clusters atteint une certaine valeur, l'inertie devient stable et ne diminue plus de manière significative. Le point de coude dans le graphique nous aide à identifier le nombre optimal de clusters. Dans ce cas, le coude se forme lorsque le nombre de clusters est égal à 2, ce qui suggère que 2 clusters représentent le meilleur compromis entre la compacité des groupes et la simplicité du modèle.
+---
+
+```{r}
+# Le critère silhouette
+Silhou <- NULL
+for (k in 2:Kmax) {
+  aux <- silhouette(kmeans(Data, k)$cluster, daisy(Data))
+  Silhou <- c(Silhou, mean(aux[, 3]))
+}
+
+# Affichage du critère silhouette pour chaque nombre de clusters
+df <- data.frame(K = 2:Kmax, Silhouette = Silhou)
+ggplot(df, aes(x = K, y = Silhouette)) +
+  geom_point() +
+  geom_line() +
+  theme(legend.position = "bottom")
+
+# Identifier le nombre optimal de clusters basé sur la silhouette
+which.max(Silhou)
+
+# Visualisation de la silhouette pour le nombre optimal de clusters
+aux <- silhouette(kmeans(Data, centers = which.max(Silhou) + 1)$cluster, daisy(Data))
+fviz_silhouette(aux) + theme(plot.title = element_text(size = 9))
+
+```
+---
+Le critère silhouette évalue la qualité du clustering. La silhouette est élevée, ce qui signifie que les points sont bien regroupés et éloignés des autres groupes. L’analyse permet de confirmer que le nombre optimal de clusters est 2.
+---
+```{r,eval=F}
+reskmeans<-kmeans(Data, 2)  
+reskmeans$cluster
+fviz_cluster(reskmeans, data=Data,ellipse=F,geom=c("point"))
+```
+
+```{r,eval=F}
+fviz_pca_ind(pca_result_ind, col.ind=as.factor(reskmeans$cluster), geom="point")
+```
+
+
+# Clustering sur les individus : DBSCAN
+```{r,eval=F}
+# Grid de recherche pour le paramètre eps et minPts
+minPts <- seq(5, 15, 1)
+eps <- seq(0.5, 10, 0.3)
+NBCluster <- matrix(0, nrow = length(minPts), ncol = length(eps))
+NBNonCl <- matrix(0, nrow = length(minPts), ncol = length(eps))
+
+# Recherche de l'optimal eps et minPts
+for (i in 1:length(minPts)) {
+  for (j in 1:length(eps)) {
+    res <- dbscan::dbscan(Data, eps = eps[j], minPts = minPts[i])
+    NBCluster[i, j] <- length(table(res$cluster)) - 1
+    NBNonCl[i, j] <- sum(res$cluster == 0)
+  }
+}
+
+# Visualisation des résultats DBSCAN
+df <- data.frame(eps = rep(eps, each = length(minPts)),
+                 minPts = as.factor(rep(minPts, length(eps))),
+                 NBCluster = c(NBCluster),
+                 NBNonCl = c(NBNonCl) * 100 / nrow(Data))
+
+# Affichage des clusters formés en fonction de eps et minPts
+ggplot(df, aes(x = eps, y = NBCluster, col = minPts)) + 
+  geom_point() + 
+  geom_line()
+
+# Affichage des points non-clustérisés (bruit)
+ggplot(df, aes(x = eps, y = NBNonCl, col = minPts)) + 
+  geom_point() + 
+  geom_line()
+
+```
+---
+Les courbes obtenues pour l'analyse DBSCAN montrent l'impact des paramètres eps (distance maximale) et minPts (nombre minimum de voisins) sur la formation des clusters et l'identification du bruit. Les courbes montrent que l'augmentation de eps réduit le nombre de clusters et de points de bruit, tandis que l'augmentation de minPts rend la formation des clusters plus stricte, réduisant aussi les clusters détectés. Les graphiques aident à ajuster ces paramètres pour optimiser le nombre de clusters et limiter le bruit.
+---
+
+```{r,eval=F}
+# A COMPLETER
+# k représente le nombre de variables dans les données
+k <- ncol(Data)
+k
+
+# Calcul des distances aux k plus proches voisins
+dbscan::kNNdistplot(Data, k)
+abline(h = 8.5)  # Ligne horizontale pour identifier l'eps optimal (coude)
+
+```
+---
+Le "coude" de la courbe nous indique un bon choix pour le paramètre eps (ici, eps = 8.5). Cette méthode consiste à calculer la moyenne des distances des k plus proches voisins pour chaque point. Ensuite, nous ordonnons ces distances de manière croissante pour identifier le point d'inflexion (le "coude") qui détermine le meilleur epsilon pour DBSCAN.
+---
+```{r,eval=F}
+# A COMPLETER
+res.db = dbscan::dbscan(Data, minPts = 8, eps = 8.5)
+res.db
+fviz_cluster(res.db, Data, geom="point",ellipse="FALSE")+
+  theme(legend.position="none")+
+  xlab("")+ylab("")+ggtitle("Avec DBSCAN")
+
+table(res.db$cluster)
+```
+---
+Les clusters obtenus avec l'algorithme DBSCAN sont globalement similaires à ceux générés par K-means, à l'exception de 13 gènes qui ne sont pas classifiés par DBSCAN. Ces gènes sont probablement considérés comme du bruit ou isolés, car DBSCAN ne les associe à aucun cluster en raison de leur éloignement ou de la densité insuffisante des voisins à proximité.
+---
+```{r,eval=F}
+fviz_pca_ind(pca_result_ind, col.ind=as.factor(res.db$cluster), geom="point")
+```
+
+```{r}
+# Comparaison des résultats de K-means et DBSCAN
+clust1 <- paste("K-k", reskmeans$cluster, sep = "")
+clust2 <- paste("Dbscan-k", res.db$cluster, sep = "")
+table(clust1, clust2)
+
+# Visualisation sous forme de diagramme d’alluvion pour la comparaison des clusters
+Tab <- melt(table(clust1, clust2))
+ggplot(Tab, aes(y = value, axis1 = clust1, axis2 = clust2)) +
+  geom_alluvium(aes(fill = clust1)) +
+  geom_stratum(width = 1 / 12) +
+  geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
+  theme(legend.position = "none")
+
+```
+
+---
+Les courbes obtenues comparent les résultats des algorithmes K-means et DBSCAN. Le tableau de comparaison montre les correspondances et divergences entre les clusters identifiés par les deux méthodes. Le diagramme visualise ces relations : des flux larges entre les clusters indiquent une forte correspondance, tandis que des petits flux correspondent à des divergences, comme des points considérés comme bruit par DBSCAN mais regroupés par K-means. 
 ---
 
 ## Nouvelle partie - Etude des différences entre les deux réplicats
