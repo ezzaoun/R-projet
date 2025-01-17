@@ -680,3 +680,155 @@ Les résultats montrent que les données de 3h offrent un ajustement beaucoup pl
     - Une réduction de RSS plus importante dans l'ANOVA,
     - Une représentation graphique des résidus plus conforme aux hypothèses du modèle linéaire.
 Ainsi, pour prédire Ymoy_6hYmoy_6h​, les données de 3h sont plus adaptées que celles de 1h.
+
+
+
+## Etude de l’expression des gènes pour le traitement T3 à 6h :
+---
+Consigne : Quelles sont les variables prédictives pour le traitement T3 à 6h parmi les différents temps observés
+pour les traitements T1 et T2 ?
+---
+
+```{r}
+# Matrice moyenne des replicats
+p = ncol(Data)
+Moy_Rep = (Data[,1:(p/2)] + Data[,((p/2) + 1):p])/2
+colnames(Moy_Rep) <- sub("_[^_]*$", "", colnames(Data[,1:(p/2)]))
+#knitr::kable(Moy_Rep)
+
+modele_T3_all <- lm(T3_6h ~ T1_1h + T1_2h + T1_3h + T1_4h + T1_5h + T1_6h +
+                      T2_1h + T2_2h + T2_3h + T2_4h + T2_5h + T2_6h, 
+                    data = Moy_Rep)
+summary(modele_T3_all)
+
+mod.AIC = stepAIC(modele_T3_all,direction="backward")
+# vif(modele_T3_all) # Calculer les facteurs d'inflation de la variance
+```
+
+
+```{r}
+library(reshape2)
+library(ggplot2)
+cor_matrix <- cor(Moy_Rep[, c("T3_6h", "T1_1h", "T1_2h", "T1_3h", "T1_4h", 
+                           "T1_5h", "T1_6h", "T2_1h", "T2_2h", "T2_3h", 
+                           "T2_4h", "T2_5h", "T2_6h")])
+
+# Convertir en format long
+cor_long <- melt(cor_matrix)
+
+# Créer une heatmap
+ggplot(cor_long, aes(Var1, Var2, fill = value)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0) +
+  theme_minimal() +
+  labs(title = "Corrélation entre Y_T3_6h et les autres variables", 
+       x = "Variables", y = "Variables")
+
+# Extraire les coefficients significatifs
+coef_model <- summary(modele_T3_all)$coefficients
+coef_df <- data.frame(
+  Variable = rownames(coef_model),
+  Coefficient = coef_model[, "Estimate"],
+  P_value = coef_model[, "Pr(>|t|)"]
+)
+
+# Filtrer les variables significatives (p-value < 0.05)
+coef_df <- coef_df[coef_df$P_value < 0.05, ]
+
+# Créer un barplot des coefficients
+ggplot(coef_df, aes(x = reorder(Variable, Coefficient), y = Coefficient)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +
+  theme_minimal() +
+  labs(title = "Coefficients significatifs du modèle", x = "Variable", y = "Coefficient")
+
+new_modele_T3_all <- lm(T3_6h ~ T1_1h + T1_2h + T1_3h + T1_4h + T1_6h +
+                      T2_2h + T2_3h + T2_4h + T2_5h + T2_6h, 
+                    data = Moy_Rep)
+anova(new_modele_T3_all,modele_T3_all)
+```
+
+
+```{r}
+ggplot(Moy_Rep, aes(x = T2_6h, y = T3_6h, color = "T2_6h")) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Relation entre Y_T2_6h et Y_T3_6h", x = "Y_T2_6h", y = "Y_T3_6h") +
+  theme_minimal()
+
+ggplot(Moy_Rep, aes(x = T1_3h, y = T3_6h, color = "T1_3h")) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  labs(title = "Relation entre Y_T1_3h et Y_T3_6h", x = "Y_T1_3h", y = "Y_T3_6h") +
+  theme_minimal()
+```
+---
+Consigne : Peut-on prédire les gènes sur-exprimés (codés 1) et les gènes sous-exprimés (codés 0) à 6h pour le
+traitement T3 à partir des observations pour les traitements T1 et T2 et les heures 1 à 3 pour ces
+mêmes gènes ?
+---
+
+```{r}
+# Filtrer les données en excluant les valeurs intermédiaires (-1 <= T3_6h <= 1)
+x = Moy_Rep[Moy_Rep$T3_6h < 1 & Moy_Rep$T3_6h > -1, ]
+# 8 genes non classés
+filtered_data <- Moy_Rep[Moy_Rep$T3_6h < -1 | Moy_Rep$T3_6h > 1, ]
+# Définir la colonne target selon les critères donnés
+filtered_data$target <- as.factor(ifelse(filtered_data$T3_6h > 1, 1, 0))
+filtered_data <- filtered_data[, c("T1_1h", "T1_2h", "T1_3h", "T2_1h", "T2_2h", "T2_3h","target")]
+table(filtered_data$target)
+
+# T1_1h+T1_2h+T1_3h+T2_1h+T2_2h+T2_3h 
+model <- glm(filtered_data$target ~. , data = filtered_data, family = "binomial")
+
+summary(model)
+
+step.backward = step(model, direction="backward",k=log(nrow(filtered_data)))
+
+bestmodel = glm(filtered_data$target ~T2_2h + T1_2h +T1_3h + T2_3h , data = filtered_data, family = "binomial")
+anova(model,bestmodel)
+```
+
+
+```{r}
+library(caret)
+library(pROC)
+
+# Sélection des prédicteurs : moyennes pour T1 et T2 aux heures 1h, 2h, et 3h
+predictors <- filtered_data[, c("T1_1h", "T1_2h", "T1_3h", "T2_1h", "T2_2h", "T2_3h")]
+target <- filtered_data$target
+
+# Diviser les données en jeu d'entraînement et de test
+set.seed(123) # Pour reproductibilité
+trainIndex <- createDataPartition(target, p = 0.7, list = FALSE) # 70% des données pour le train
+trainData <- predictors[trainIndex, ]
+trainLabel <- target[trainIndex]
+testData <- predictors[-trainIndex, ]
+testLabel <- target[-trainIndex]
+
+# Étape 2 : Ajustement du modèle (Régression logistique)
+# Ajuster un modèle de régression logistique
+model <- glm(trainLabel ~ ., data = data.frame(trainData, trainLabel), family = "binomial")
+
+# Résumé du modèle
+summary(model)
+
+# Étape 3 : Prédiction sur le jeu de test
+predictions <- predict(model, newdata = data.frame(testData), type = "response")
+
+# Convertir les probabilités en classes
+predicted_class <- ifelse(predictions > 0.5, 1, 0)
+
+# Étape 4 : Évaluation des performances
+# Calculer la matrice de confusion
+conf_matrix <- confusionMatrix(as.factor(predicted_class), as.factor(testLabel))
+print(conf_matrix)
+
+# Courbe ROC
+roc_curve <- roc(testLabel, predictions)
+
+# Tracer la courbe ROC
+plot(roc_curve, main = "Courbe ROC", col = "blue", lwd = 2)
+auc_value <- auc(roc_curve)
+print(paste("AUC:", auc_value))
+```
