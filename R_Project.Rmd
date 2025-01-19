@@ -47,7 +47,7 @@ library(clusterSim)
 ## Statistique descriptive
 
 --- 
-Le jeu de données étudié possède 1615 génes et 36 variables qualitatives associées.
+Le jeu de données étudié possède 2144 génes et 36 variables qualitatives associées.
 Nous allons dans un premier temps afficher ce jeu de données.
 ---
 ```{r}
@@ -61,10 +61,6 @@ Nous allons ensuite afficher la distribution des mesures d'expression des génes
 ```{r}
 options(max.print = 1000)
 summary(Data)
-```
-
-```{r}
-boxplot(Data)
 ```
 
 ---
@@ -112,14 +108,15 @@ Pour le traitement 2, on remarque de les résultats sont plus corrélé à la fi
 Pour le traitement 3, on remarque que le corrélation sont toutes très proches de 1, cela signifie que les 2 expriences ont une vitesse égale et donc que le traitement à une probalité d'efficaté plus important que les deux précédents.
 ---
 ```{r}
-ggplot(melt(Data), aes(x = variable, y = value)) + geom_boxplot() + labs(title = "Boxplot des données mises à l'échelle", x = "Variable", y = "Valeur (échelle standardisée)") +
+ggplot(melt(Data), aes(x = variable, y = value)) + geom_boxplot() + labs(title = "Boxplot des données", x = "Variable", y = "Valeur (échelle standardisée)") +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
-#c'est pas assez informatif
-#pour avoir une meilleure representation, on fait un violin plot
 ```
 D’abord, on observe une distinction nette entre les réplicats R1 et R2, témoignant d’une périodicité dans les valeurs d'expression. Ce phénomène s'explique par le fait que les mêmes gènes sont soumis aux mêmes traitements et conditions pour chaque réplicat, bien que des variations aléatoires introduisent de légères différences.
 
-Les boxplots révèlent trois groupes distincts correspondant aux traitements T1, T2, et T3. Pour le traitement T1, les médianes sont proches de 0, indiquant une faible réaction des gènes. En revanche, sous le traitement T2, les médianes montrent une tendance à s’éloigner de 0, suggérant une réponse progressive des gènes. Le traitement T3, combinaison de T1 et T2, montre des profils similaires à T2, ce qui laisse penser que T2 domine dans l’effet global du mélange et induit une réaction notable.
+Les boxplots révèlent trois groupes distincts correspondant aux traitements T1, T2, et T3.
+- Pour le traitement T1, les médianes sont proches de 0, ce qui suggère une faible réaction des gènes ou l’absence d’un effet global mesurable. Les boîtes étroites et la faible variabilité confirment que la réponse des gènes reste homogène.
+- Sous T2, les médianes s’éloignent nettement de 0, indiquant une réaction progressive des gènes au fil du temps.
+- Étant une combinaison de T1 et T2, T3 présente des profils similaires à ceux de T2. Cela suggère que l’effet du traitement T2 domine dans l’effet global de T3, induisant une réponse notable des gènes. Cependant, il est possible que l’effet de T1 modère légèrement certaines réponses observées sous T3.
 
 Ces observations s’appliquent de manière presque symétrique aux deux réplicats, illustrant leur homogénéité générale.
 
@@ -148,15 +145,15 @@ fviz_pca_var(respca,
 
 fviz_eig(respca)
 ```
+A partir du graphe des individus on observe :
+- Les réplicats (R1 et R2) montrent une cohérence, car ils se regroupent dans l’espace factoriel pour un même traitement et une même heure. Cela confirme que les variations observées dans les données sont principalement dues aux effets des traitements et des temps, et non à des différences techniques entre les réplicats.
+- Le traitement 1 se distingue clairement des traitements 2 et 3 en formant un cluster isolé. On peut interprété la première dimension comme la magnitude de la réponse des gènes aux traitements, opposant T1 (réponse quasi nulle) à T2 et T3 (réponses significatives). T2 et T3 sont plus proches l’un de l’autre, confirmant que T3 est dominé par T2.
+- La dimension 2 reflète l’évolution temporelle des réponses génétiques, avec une décroissance notable pour T2 et T3 au fil des heures. T1 reste stable sur cet axe, témoignant d'une absence d’effet temporel significatif.
 
+## Clustering :
+### Choix du nombre de classes :
+On trace l'inertie intraclasse en fonction du nombre de classes possibles et on identifie le nombre optimal de classes en repérant l'apparition du coude. Étant donné le faible nombre d'individus et leur répartition claire sur les axes principaux de l'ACP, on peut raisonnablement anticiper le nombre de classes attendu.
 
-```{r}
-reskmeans<-kmeans(transData,centers = 3)
-fviz_cluster(reskmeans,transData,ellipse.type = "norm")
-fviz_pca_ind(respca,col.ind=as.factor(reskmeans$cluster))
-```
-on peut voir une séparation en 3 classes distinguées
-En analysant ces classes, on peut voir qu'une premiere classe contient les tests qu'on a fait avec T1 sur R1 et R2, ainsi que certains tests avec T2 et T3 à des heures avancées (
 ```{r}
 # courbe du coude
 set.seed(1234)
@@ -174,7 +171,6 @@ ggplot(df,aes(x=K,y=Iintra))+geom_line()+geom_point()+xlab("Nombre de classes")+
 # on peut voir qu'on a entre 3 ou 4 classes, ce qui est attendu vu le graphe de projection des individus de l'ACP
 ```
 
-
 ```{r}
 # Silouhette
 Silhou<-NULL
@@ -191,6 +187,12 @@ ggplot(df,aes(x=K,y=Silhouette))+
 aux<-silhouette(reskmeanscl[,2],dist(transData))
 fviz_silhouette(aux)+theme(plot.title = element_text(size =9))
 rm(df,Silhou,aux)
+```
+
+```{r}
+reskmeans<-kmeans(transData,centers = 3)
+fviz_cluster(reskmeans,transData,ellipse.type = "norm")
+fviz_pca_ind(respca,col.ind=as.factor(reskmeans$cluster))
 ```
 
 
@@ -412,7 +414,21 @@ pheatmap(Data[1:20, ], cluster_rows = TRUE, cluster_cols = TRUE, main = "Heatmap
 La heatmap des 20 premiers gènes montre l'expression des gènes à travers différentes conditions, accompagnée de dendrogrammes qui regroupent les gènes et les conditions selon leurs profils d'expression. On remarque que les gènes du cluster en haut à droite, sont fortement corrélés avec les traitements 2 et 3. On peut en déduire que l'un des clusters regroupe principalement les gènes ayant subi les traitements 2 et 3, tandis que l'autre cluster correspond majoritairement aux gènes ayant subi le traitement 1.
 ---
 
-## Nouvelle partie - Etude des différences entre les deux réplicats
+## Etude des différences entre les deux réplicats
+
+Nous cherchons à étudier la différence entre les deux réplicats. Pour ce faire, nous définissons une nouvelle variable \( Y_{tsg} \) :
+\[
+Y_{tsg} = Y_{tsgR1} - Y_{tsgR2}
+\]
+L'objectif est de modéliser cette variable \( Y_{tsg} \) en fonction de deux facteurs principaux :
+\begin{itemize}
+  \item \textbf{Le temps} (\( Temps \)), qui est une variable quantitative.
+  \item \textbf{Le traitement} (\( Traitement \)), qui est une variable qualitative.
+\end{itemize}
+Pour ce faire, nous utilisons un \textbf{modèle ANCOVA avec interaction}, qui permet de modéliser la relation entre la variable dépendante \( Y_{tsg} \) et les deux facteurs (temps et traitement), ainsi que leur interaction.
+\[
+Y_{tsg} = \beta_0 + \beta_1 \cdot Temps + \beta_2 \cdot Traitement + \beta_3 \cdot (Temps \times Traitement) + \epsilon
+\]
 
 ---
 Les lois de probabilité associés aux valeurs observées pour les deux réplicats sont elles significativement différentes ? Même question en se concentrant sur chaque traitement pris séparément. --> Réponses à partir du cours de janvier
@@ -454,8 +470,6 @@ temps <- as.numeric(sapply(strsplit(noms_Y, "[_h]"), function(x) x[2]))
 matrix = as.data.frame(cbind(Y, traitement, temps))
 matrix$temps <- as.numeric(matrix$temps)
 matrix$Y <- as.numeric(matrix$Y)
-
-
 ```
 
 ```{r}
@@ -574,21 +588,22 @@ knitr::kable(matrixMoy)
 
 
 ```{r}
-ggplot(matrixMoy,aes(x=Y_moy_1h,y=Y_moy_6h))+ 
-  geom_point(aes(shape=traitement,col=traitement)) 
+# Prédictions à partir du modèle
+matrixMoy$Predicted <- predict(M_1h_to_6h, newdata = matrixMoy)
 
-ggplot(matrixMoy, aes(x = Y_moy_1h, y = Y_moy_6h, color = traitement)) +
-  geom_point(aes(shape = traitement)) +
-  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, linetype = "dashed") +
-  geom_smooth(method = "lm", formula = y ~ x * traitement, se = FALSE) +
-  labs(title = "Relation entre Y_moy_1h et Y_moy_6h",
-       x = "Y_moy_1h",
-       y = "Y_moy_6h")
-
+# Tracé des valeurs observées (Y_moy_6h) par rapport aux valeurs prédites
+ggplot(matrixMoy, aes(x = Predicted, y = Y_moy_6h)) +
+  geom_point(aes(color = traitement), alpha = 0.6) +  # Points colorés par traitement
+  geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +  # Ligne Y = X
+  labs(
+    title = "Valeurs Observées vs Prédites",
+    x = "Valeurs prédites",
+    y = "Valeurs observées"
+  ) +
+  theme_minimal()
 ```
-
-
-
+On observe que les valeurs prédites sont principalement proches de 0, tandis que les valeurs observées, en particulier pour les traitements T2 et T3, diffèrent significativement de 0. Cela suggère que l'expression des gènes à 1h ne constitue pas un bon indicateur pour prédire celle à 6h.
+En effet, 1 heure représente un stade relativement précoce, et les gènes n'ont probablement pas eu suffisamment de temps pour réagir aux traitements. Par conséquent, il est difficile de faire des prédictions fiables sur l'expression génique à 6 heures en se basant sur des données obtenues à 1 heure.
 
 ```{r}
 M_1h_to_6h <- lm(Y_moy_6h~Y_moy_1h*traitement, data = matrixMoy)
@@ -642,27 +657,34 @@ knitr::kable(matrixMoy2)
 
 
 ```{r}
-ggplot(matrixMoy2, aes(x = Y_moy_3h, y = Y_moy_6h, color = traitement)) +
-  geom_point(aes(shape = traitement)) +
-  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, linetype = "dashed") +
-  geom_smooth(method = "lm", formula = y ~ x * traitement, se = FALSE) +
-  labs(title = "Relation entre Y_moy_6h et Y_moy_3h",
-       x = "Y_moy_3h",
-       y = "Y_moy_6h")
-```
+# Prédictions à partir du modèle
+matrixMoy2$Predicted <- predict(M_3h_to_6h, newdata = matrixMoy2)
 
+# Tracé des valeurs observées (Y_moy_6h) par rapport aux valeurs prédites
+library(ggplot2)
+ggplot(matrixMoy2, aes(x = Predicted, y = Y_moy_6h)) +
+  geom_point(aes(color = traitement), alpha = 0.6) +  # Points colorés par traitement
+  geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +  # Ligne Y = X
+  labs(
+    title = "Valeurs Observées vs Prédites",
+    x = "Valeurs prédites",
+    y = "Valeurs observées"
+  ) +
+  theme_minimal()
+```
+Modèle 3h :
+- Residual Standard Error (RSE) : 1.168
+- R² ajusté : 0.770
+- La variance expliquée est beaucoup plus élevée, indiquant que les prédictions du modèle pour les données à 3h sont nettement meilleures.
+
+Interprétation :
+Le modèle basé sur les données de 3h est nettement plus performant que celui de 1h, avec un R² ajusté presque trois fois supérieur et un RSE significativement plus faible. Cela signifie que les valeurs à 3h expliquent beaucoup mieux les valeurs à 6h.
+On peut voir aussi que les valeurs predites correspondent aux valeurs observés. On a donc une meilleure prédiction comparé au modele precedent
 
 ```{r}
 M_3h_to_6h <- lm(Y_moy_6h~Y_moy_3h*traitement, data = matrixMoy2)
 summary(M_3h_to_6h)
 ```
-    Modèle 3h :
-        Residual Standard Error (RSE) : 1.168
-        R² ajusté : 0.770
-        La variance expliquée est beaucoup plus élevée, indiquant que les prédictions du modèle pour les données à 3h sont nettement meilleures.
-
-Interprétation :
-Le modèle basé sur les données de 3h est nettement plus performant que celui de 1h, avec un R² ajusté presque trois fois supérieur et un RSE significativement plus faible. Cela signifie que les valeurs à 3h expliquent beaucoup mieux les valeurs à 6h.
 
 
 ```{r}
@@ -675,11 +697,6 @@ plot(M_3h_to_6h)
 M_3h_to_6h_no_inter <- lm(Y_moy_6h ~ Y_moy_3h + traitement, data = matrixMoy2)
 anova(M_3h_to_6h_no_inter, M_3h_to_6h)
 ```
-Les résultats montrent que les données de 3h offrent un ajustement beaucoup plus précis que celles de 1h. Cela est confirmé par :
-    - Une meilleure qualité de l'ajustement (RSE plus faible et R² ajusté plus élevé),
-    - Une réduction de RSS plus importante dans l'ANOVA,
-    - Une représentation graphique des résidus plus conforme aux hypothèses du modèle linéaire.
-Ainsi, pour prédire Ymoy_6hYmoy_6h​, les données de 3h sont plus adaptées que celles de 1h.
 
 
 
@@ -748,20 +765,20 @@ new_modele_T3_all <- lm(T3_6h ~ T1_1h + T1_2h + T1_3h + T1_4h + T1_6h +
 anova(new_modele_T3_all,modele_T3_all)
 ```
 
-
 ```{r}
-ggplot(Moy_Rep, aes(x = T2_6h, y = T3_6h, color = "T2_6h")) +
-  geom_point() +
-  geom_smooth(method = "lm", se = FALSE, color = "red") +
-  labs(title = "Relation entre Y_T2_6h et Y_T3_6h", x = "Y_T2_6h", y = "Y_T3_6h") +
-  theme_minimal()
-
-ggplot(Moy_Rep, aes(x = T1_3h, y = T3_6h, color = "T1_3h")) +
-  geom_point() +
-  geom_smooth(method = "lm", se = FALSE, color = "blue") +
-  labs(title = "Relation entre Y_T1_3h et Y_T3_6h", x = "Y_T1_3h", y = "Y_T3_6h") +
+tmp = Moy_Rep
+tmp$Predicted <- predict(new_modele_T3_all, newdata = tmp)
+ggplot(tmp, aes(x = Predicted, y = T3_6h)) +
+  geom_point() +# Points colorés par traitement
+  geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +  # Ligne Y = X
+  labs(
+    title = "Valeurs Observées vs Prédites",
+    x = "Valeurs prédites",
+    y = "Valeurs observées"
+  ) +
   theme_minimal()
 ```
+
 ---
 Consigne : Peut-on prédire les gènes sur-exprimés (codés 1) et les gènes sous-exprimés (codés 0) à 6h pour le
 traitement T3 à partir des observations pour les traitements T1 et T2 et les heures 1 à 3 pour ces
@@ -778,7 +795,6 @@ filtered_data$target <- as.factor(ifelse(filtered_data$T3_6h > 1, 1, 0))
 filtered_data <- filtered_data[, c("T1_1h", "T1_2h", "T1_3h", "T2_1h", "T2_2h", "T2_3h","target")]
 table(filtered_data$target)
 
-# T1_1h+T1_2h+T1_3h+T2_1h+T2_2h+T2_3h 
 model <- glm(filtered_data$target ~. , data = filtered_data, family = "binomial")
 
 summary(model)
@@ -791,43 +807,17 @@ anova(model,bestmodel)
 
 
 ```{r}
-library(caret)
-library(pROC)
+# Prédire sur les données de test ou validation
+predictions <- predict(model, newdata = filtered_data, type = "response")
 
-# Sélection des prédicteurs : moyennes pour T1 et T2 aux heures 1h, 2h, et 3h
-predictors <- filtered_data[, c("T1_1h", "T1_2h", "T1_3h", "T2_1h", "T2_2h", "T2_3h")]
-target <- filtered_data$target
-
-# Diviser les données en jeu d'entraînement et de test
-set.seed(123) # Pour reproductibilité
-trainIndex <- createDataPartition(target, p = 0.7, list = FALSE) # 70% des données pour le train
-trainData <- predictors[trainIndex, ]
-trainLabel <- target[trainIndex]
-testData <- predictors[-trainIndex, ]
-testLabel <- target[-trainIndex]
-
-# Étape 2 : Ajustement du modèle (Régression logistique)
-# Ajuster un modèle de régression logistique
-model <- glm(trainLabel ~ ., data = data.frame(trainData, trainLabel), family = "binomial")
-
-# Résumé du modèle
-summary(model)
-
-# Étape 3 : Prédiction sur le jeu de test
-predictions <- predict(model, newdata = data.frame(testData), type = "response")
-
-# Convertir les probabilités en classes
+# Convertir les prédictions en classes (0 ou 1) en fonction d'un seuil de 0.5
 predicted_class <- ifelse(predictions > 0.5, 1, 0)
 
-# Étape 4 : Évaluation des performances
-# Calculer la matrice de confusion
-conf_matrix <- confusionMatrix(as.factor(predicted_class), as.factor(testLabel))
-print(conf_matrix)
+# Matrice de confusion
+table(predicted_class, filtered_data$target)
+adjustedRandIndex(predicted_class, filtered_data$target)
 
-# Courbe ROC
-roc_curve <- roc(testLabel, predictions)
-
-# Tracer la courbe ROC
+roc_curve <- roc(filtered_data$target, predictions)
 plot(roc_curve, main = "Courbe ROC", col = "blue", lwd = 2)
 auc_value <- auc(roc_curve)
 print(paste("AUC:", auc_value))
