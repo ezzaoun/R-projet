@@ -118,6 +118,26 @@ Pour le traitement 2 et 3, on remarque que sur la diagonale (même traitement m�
 ```{r}
 ggplot(melt(Data), aes(x = variable, y = value)) + geom_boxplot() + labs(title = "Boxplot des données", x = "Variable", y = "Valeur (échelle standardisée)") +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+# violin plot pour mieux visualiser 
+data_long <- melt(Data, 
+                  variable.name = "Condition", 
+                  value.name = "Expression")
+
+# Ajouter des colonnes pour séparer Réplicats, Traitements et Temps
+data_long$Replicate <- ifelse(grepl("R1", data_long$Condition), "R1", "R2")
+data_long$Treatment <- sub("_.*", "", data_long$Condition)
+data_long$Time <- gsub(".*_(\\d+h)_.*", "\\1", data_long$Condition)
+
+# Tracer le violin plot avec ggplot
+ggplot(data_long, aes(x = Time, y = Expression, fill = Treatment)) +
+  geom_violin(scale = "width", trim = TRUE) +
+  facet_wrap(~ Replicate) +  # Facet par réplicat
+  labs(title = "Distribution des Expressions par Réplicat, Temps et Traitement",
+       x = "Temps",
+       y = "Expression",
+       fill = "Traitement") +
+  theme_minimal()
 ```
 
 D’abord, on observe une distinction nette entre les réplicats R1 et R2, témoignant d’une périodicité dans les valeurs d'expression. Ce phénomène s'explique par le fait que les mêmes gènes sont soumis aux mêmes traitements et conditions pour chaque réplicat, bien que des variations aléatoires introduisent de légères différences.
@@ -132,7 +152,7 @@ Ces observations s’appliquent de manière presque symétrique aux deux réplic
 ## Analyse des variables T_t s_H R_r
 
 ---
-On translate les données pour pouvoir réaliser l’analyse des variables. 
+On transpose les données pour pouvoir réaliser l’analyse des variables. 
 ---
 
 ```{r}
@@ -211,7 +231,31 @@ reskmeans<-kmeans(transData,centers = 3)
 fviz_cluster(reskmeans,transData,ellipse.type = "norm")
 fviz_pca_ind(respca,col.ind=as.factor(reskmeans$cluster))
 ```
+### Modele de melanges :
+Pour effectuer un clustering basé sur un modèle de mélanges, nous utilisons les coordonnées issues de l'ACP comme matrice de données pour classer les variables $T_ts_HR_r$. Ce choix est motivé par la taille de la matrice de variance-covariance du jeu de données initial, qui est $p*p=2144*2144$. Une matrice aussi grande serait coûteuse en temps de calcul et ralentirait considérablement la convergence vers le mélange optimal. En utilisant les coordonnées principales, nous réduisons la dimension tout en préservant l'essentiel de l'information.
+```{r}
+Dataacp<-respca$ind$coord[,1:5]
 
+resICLall = mclustICL(Dataacp,G=2:20)
+summary(resICLall)
+
+modICL = Mclust(Dataacp, G = 8,modelNames = "VEV")
+Aux = data.frame(label=paste("Cl",modICL$classification,sep=""),proba=apply(modICL$z,1,max))
+ggplot(Aux,aes(x=label,y = proba)) + geom_boxplot()
+fviz_cluster(modICL)
+
+adjustedRandIndex(modICL$classification,reskmeans$cluster)
+table(modICL$classification,reskmeans$cluster)
+
+clust1<-paste("MEL-k",modICL$classification,sep="")
+clust2<-paste("K-k",reskmeans$cluster,sep="")
+Tab<-melt(table(clust1,clust2))
+ggplot(Tab,aes(y=value,axis1=clust1,axis2=clust2))+
+  geom_alluvium(aes(fill=clust1))+
+  geom_stratum(width = 1/12)+   
+  geom_text(stat = "stratum", aes(label = after_stat(stratum)))+
+  theme(legend.position = "none")
+```
 
 ```{r}
 hward<-hclust(dist(transData),method = "ward.D2")
@@ -434,18 +478,16 @@ La heatmap des 20 premiers gènes montre l'expression des gènes à travers diff
 ## Etude des différences entre les deux réplicats
 
 Nous cherchons à étudier la différence entre les deux réplicats. Pour ce faire, nous définissons une nouvelle variable \( Y_{tsg} \) :
-\[
+$$
 Y_{tsg} = Y_{tsgR1} - Y_{tsgR2}
-\]
-L'objectif est de modéliser cette variable \( Y_{tsg} \) en fonction de deux facteurs principaux :
-\begin{itemize}
-  \item \textbf{Le temps} (\( Temps \)), qui est une variable quantitative.
-  \item \textbf{Le traitement} (\( Traitement \)), qui est une variable qualitative.
-\end{itemize}
+$$
+L'objectif est de modéliser cette variable $Y_{tsg}$ en fonction de deux facteurs principaux :
+- Le temps : une variable quantitative.
+- Le traitement : une variable qualitative.
 Pour ce faire, nous utilisons un \textbf{modèle ANCOVA avec interaction}, qui permet de modéliser la relation entre la variable dépendante \( Y_{tsg} \) et les deux facteurs (temps et traitement), ainsi que leur interaction.
-\[
-Y_{tsg} = \beta_0 + \beta_1 \cdot Temps + \beta_2 \cdot Traitement + \beta_3 \cdot (Temps \times Traitement) + \epsilon
-\]
+$$
+Y_{tsg} = \beta_0 + \beta_1 \cdot Temps + \beta_2 \cdot Traitement + \beta_3 \cdot (Temps \times Traitement) + \epsilon_{tsg} ,\ t\in\{1,\ldots,3\} ,\ s\in\{1,\ldots,6\} ,\ g\in\{1,\ldots,2144\}.
+$$
 
 ---
 Les lois de probabilité associés aux valeurs observées pour les deux réplicats sont elles significativement différentes ? Même question en se concentrant sur chaque traitement pris séparément. --> Réponses à partir du cours de janvier
