@@ -131,6 +131,11 @@ Les boxplots révèlent trois groupes distincts correspondant aux traitements T1
 Ces observations s’appliquent de manière presque symétrique aux deux réplicats, illustrant leur homogénéité générale.
 
 ## Analyse des variables T_t s_H R_r
+
+---
+On translate les données pour pouvoir réaliser l’analyse des variables. 
+---
+
 ```{r}
 # transformation du tableau 
 transData = t(Data)
@@ -147,6 +152,9 @@ fviz_pca_ind(respca,
              gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
              repel = TRUE,
              title = "Projection des gènes dans l'espace des composantes principales")
+
+fviz_pca_ind(respca, axes = c(1,2), geom = c("text", "point"), col.ind = rep(c(rep("T1", 6), rep("T2", 6), rep("T3", 6)),2), repel = TRUE, title = "ACP des individues regroupés par traitement")
+fviz_pca_ind(respca, axes = c(1,2), geom = c("text", "point"), col.ind = rep(c("1h","2h","3h","4h","5h", "6h"), 6), repel = TRUE, title = "ACP des individues regroupés par heure")
 
 fviz_pca_var(respca, 
              col.var = "contrib", 
