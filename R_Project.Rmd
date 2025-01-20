@@ -69,7 +69,6 @@ On trace ensuite les corrélations entre les différentes variables
 
 ```{r}
 corrplot(cor(Data), method = "ellipse")
-# test
 ```
 
 ---
