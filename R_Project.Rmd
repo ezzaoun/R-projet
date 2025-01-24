@@ -265,169 +265,119 @@ fviz_pca_ind(respca,geom=c("point"),col.ind=as.factor(ClustCH))
 ```
 
 )
+
 ## Analyse des individus Gènes
-# Partie ACP des individus
-```{r}
-# Exécution de l'ACP sur les individus (les gènes)
-pca_result_ind <- PCA(Data, scale.unit = FALSE, graph = FALSE)  # ACP sans mise à l'échelle
+### Partie ACP des individus
 
-# Visualisation des individus (gènes) en fonction du cos2 pour évaluer la qualité de leur projection
-fviz_pca_ind(pca_result_ind, col.ind = "cos2", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"))
 
-# Afficher les valeurs cos2 des individus pour analyser leur qualité de représentation
-pca_result_ind$var$cos2
+Nous nous intéressons ici aux individus. La figure \ref{fig:acp_ind} représente ces individus dans un espace réduit.
 
-# Visualisation de l'inertie des axes principaux pour observer la variance expliquée
-fviz_eig(pca_result_ind)
+
+```{r, echo=FALSE,fig.height=3,fig.cap="\\label{fig:acp_ind}Représentation des individus sur les axes principaux de l'ACP"}
+pca_res_ind <- PCA(Data, scale.unit = FALSE, graph = FALSE) 
+fviz_pca_ind(pca_res_ind, col.ind = "cos2", gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"))
 ```
+Ce graphique met en évidence la formation de deux groupes distincts de gènes, répartis de part et d'autre du premier axe principal. Ce premier axe est celui qui sépare le mieux les gènes, indiquant que les 2 groupes contiennent des gènes présentant des profils d'expression très différents. Les gènes proches sur le graphique ont des profils d'expression similaires, tandis que ceux éloignés montrent des différences significatives. La coloration des points, basée sur le cos2, reflète la qualité de la projection des gènes : les couleurs chaudes indiquent une meilleure qualité de projection, ce qui signifie que ces gènes contribuent davantage à la variance expliquée dans cet espace réduit.
 
----
-Le premier aspect qui se démarque est la formation de deux clusters distincts. Cela suggère que les gènes se regroupent en fonction de leur expression similaire sous les différentes conditions. Les points proches les uns des autres représentent des gènes ayant des profils d'expression similaires, tandis que les points éloignés indiquent des gènes présentant des différences notables dans leur expression. La coloration des points en fonction du cos2 permet de visualiser la qualité de la projection des gènes dans cet espace réduit, avec des couleurs chaudes signalant une meilleure représentation et une contribution plus forte à l'explication de la variance dans l'espace de faible dimension.
----
+### Clustering K-means : 
 
-# Clustering sur les individus : K-means
+Tout d'abord, nous utiliserons la méthode k-means pour étudier le clustering des individus. La figure \ref{fig:inertie_silhou} nous permettra de déterminer le nombre optimal de clusters en analysant l'évolution de l'inertie intra-classe et en utilisant le critère silhouette pour évaluer la qualité du clustering.
 
-```{r}
-# Évolution de l'inertie intraclasse pour choisir le nombre optimal de clusters
+
+```{r, echo=FALSE,fig.height=3,fig.cap="\\label{fig:inertie_silhou}Évolution de l'inertie intra-classe et du critère silhouette"}
 Kmax <- 15
 reskmeanscl <- matrix(0, nrow = nrow(Data), ncol = Kmax - 1)
 Iintra <- NULL
 
-# Calcul de l'inertie pour chaque nombre de clusters
 for (k in 1:Kmax) {
   resaux <- kmeans(Data, k, nstart = 1)
   reskmeanscl[, k - 1] <- resaux$cluster
   Iintra <- c(Iintra, resaux$tot.withinss)
 }
 
-# Affichage de l’évolution de l’inertie en fonction du nombre de clusters
 df <- data.frame(K = 1:15, Iintra = Iintra)
-ggplot(df, aes(x = K, y = Iintra)) +
+g_intra = ggplot(df, aes(x = K, y = Iintra)) +
   geom_line() +
   geom_point() +
   xlab("Nombre de clusters") +
   ylab("Inertie intraclasse")
 
-```
----
-L'inertie intra-classe diminue à mesure que le nombre de clusters augmente. Cependant, lorsque le nombre de clusters atteint une certaine valeur, l'inertie devient stable et ne diminue plus de manière significative. Le point de coude dans le graphique nous aide à identifier le nombre optimal de clusters. Dans ce cas, le coude se forme lorsque le nombre de clusters est égal à 2, ce qui suggère que 2 clusters représentent le meilleur compromis entre la compacité des groupes et la simplicité du modèle.
----
-
-```{r}
-# Le critère silhouette
 Silhou <- NULL
 for (k in 2:Kmax) {
   aux <- silhouette(kmeans(Data, k)$cluster, daisy(Data))
   Silhou <- c(Silhou, mean(aux[, 3]))
 }
 
-# Affichage du critère silhouette pour chaque nombre de clusters
 df <- data.frame(K = 2:Kmax, Silhouette = Silhou)
-ggplot(df, aes(x = K, y = Silhouette)) +
+g_silhou = ggplot(df, aes(x = K, y = Silhouette)) +
   geom_point() +
   geom_line() +
   theme(legend.position = "bottom")
 
-# Identifier le nombre optimal de clusters basé sur la silhouette
-which.max(Silhou)
-
-# Visualisation de la silhouette pour le nombre optimal de clusters
 aux <- silhouette(kmeans(Data, centers = which.max(Silhou) + 1)$cluster, daisy(Data))
-fviz_silhouette(aux) + theme(plot.title = element_text(size = 9))
+grid.arrange(g_intra, g_silhou, ncol=2)
 
 ```
----
-Le critère silhouette évalue la qualité du clustering. La silhouette est élevée, ce qui signifie que les points sont bien regroupés et éloignés des autres groupes. L’analyse permet de confirmer que le nombre optimal de clusters est 2.
----
-```{r,eval=F}
-reskmeans<-kmeans(Data, 2)  
+
+
+La figure de gauche représente l'évolution de l'inertie intra-classe, qui diminue à mesure que le nombre de clusters augmente. Cependant, lorsque le nombre de clusters atteint un certain seuil, l'inertie devient stable et ne diminue plus de manière significative. Le point de coude dans le graphique nous aide à identifier le nombre optimal de clusters. Dans ce cas, le coude se forme lorsque le nombre de clusters est égal à 4, ce qui suggère que 4 clusters représentent le meilleur compromis entre la compacité des groupes et la simplicité du modèle.
+
+La courbe de l'évolution du critère silhouette montre que le nombre optimal de clusters est égal à 2. Cependant, le critère silhouette est basé sur une moyenne, ce qui signifie qu'il peut être sensible à la présence d'outliers, et dans ce cas, il peut attribuer des clusters incorrects.
+
+Nous pouvons maintenant représenter les individus dans l'espace réduit de l'ACP et les afficher selon leur cluster.
+
+
+```{r, echo=FALSE, include=FALSE}
+reskmeans<-kmeans(Data, 4)  
 reskmeans$cluster
 fviz_cluster(reskmeans, data=Data,ellipse=F,geom=c("point"))
 ```
 
-```{r,eval=F}
-fviz_pca_ind(pca_result_ind, col.ind=as.factor(reskmeans$cluster), geom="point")
+```{r, fig.height=3,echo=FALSE,fig.cap="\\label{fig:k_means_ind}Clusters représentés sur les axes principaux"}
+fviz_pca_ind(pca_res_ind, col.ind=as.factor(reskmeans$cluster), geom="point")
 ```
 
+#### Clustering Hiérarchique (HAC)
+La figure \ref{fig:dendo_ind} ci-dessous représente le clustering hiérarchique, permettant de créer un dendrogramme et de déterminer les clusters en coupant l'arbre à un niveau spécifique.
 
-# Clustering sur les individus : DBSCAN
-```{r,eval=F}
-# Grid de recherche pour le paramètre eps et minPts
-minPts <- seq(5, 15, 1)
-eps <- seq(0.5, 10, 0.3)
-NBCluster <- matrix(0, nrow = length(minPts), ncol = length(eps))
-NBNonCl <- matrix(0, nrow = length(minPts), ncol = length(eps))
-
-# Recherche de l'optimal eps et minPts
-for (i in 1:length(minPts)) {
-  for (j in 1:length(eps)) {
-    res <- dbscan::dbscan(Data, eps = eps[j], minPts = minPts[i])
-    NBCluster[i, j] <- length(table(res$cluster)) - 1
-    NBNonCl[i, j] <- sum(res$cluster == 0)
-  }
-}
-
-# Visualisation des résultats DBSCAN
-df <- data.frame(eps = rep(eps, each = length(minPts)),
-                 minPts = as.factor(rep(minPts, length(eps))),
-                 NBCluster = c(NBCluster),
-                 NBNonCl = c(NBNonCl) * 100 / nrow(Data))
-
-# Affichage des clusters formés en fonction de eps et minPts
-ggplot(df, aes(x = eps, y = NBCluster, col = minPts)) + 
-  geom_point() + 
-  geom_line()
-
-# Affichage des points non-clustérisés (bruit)
-ggplot(df, aes(x = eps, y = NBNonCl, col = minPts)) + 
-  geom_point() + 
-  geom_line()
-
+```{r, fig.cap="\\label{fig:deno_ind}Dendrogramme avec 2 clusters"}
+hclust_res <- hclust(dist(Data))
+plot(hclust_res, main = "Dendrogramme avec 2 clusters")
+rect.hclust(hclust_res, k = 2, border = "red")
 ```
----
-Les courbes obtenues pour l'analyse DBSCAN montrent l'impact des paramètres eps (distance maximale) et minPts (nombre minimum de voisins) sur la formation des clusters et l'identification du bruit. Les courbes montrent que l'augmentation de eps réduit le nombre de clusters et de points de bruit, tandis que l'augmentation de minPts rend la formation des clusters plus stricte, réduisant aussi les clusters détectés. Les graphiques aident à ajuster ces paramètres pour optimiser le nombre de clusters et limiter le bruit.
----
 
-```{r,eval=F}
-# A COMPLETER
-# k représente le nombre de variables dans les données
-k <- ncol(Data)
-k
+Le dendrogramme montre que les groupes de gènes qui se fusionnent tôt ont des profils d'expression trés similaires, tandis que ceux qui se rejoignent plus tard présentent des différences plus marquées. On observe que le nombre optimal de clusters est égal à 2. 
 
-# Calcul des distances aux k plus proches voisins
-dbscan::kNNdistplot(Data, k)
-abline(h = 8.5)  # Ligne horizontale pour identifier l'eps optimal (coude)
+### Mélange gaussien
 
-```
----
-Le "coude" de la courbe nous indique un bon choix pour le paramètre eps (ici, eps = 8.5). Cette méthode consiste à calculer la moyenne des distances des k plus proches voisins pour chaque point. Ensuite, nous ordonnons ces distances de manière croissante pour identifier le point d'inflexion (le "coude") qui détermine le meilleur epsilon pour DBSCAN.
----
-```{r,eval=F}
-# A COMPLETER
-res.db = dbscan::dbscan(Data, minPts = 8, eps = 8.5)
-res.db
-fviz_cluster(res.db, Data, geom="point",ellipse="FALSE")+
-  theme(legend.position="none")+
-  xlab("")+ylab("")+ggtitle("Avec DBSCAN")
+Nous nous intéressons ici à la méthode des mélanges gaussiens, basée sur l'hypothèse que les données suivent une distribution de probabilité composée de plusieurs distributions gaussiennes.
 
-table(res.db$cluster)
-```
----
-Les clusters obtenus avec l'algorithme DBSCAN sont globalement similaires à ceux générés par K-means, à l'exception de 13 gènes qui ne sont pas classifiés par DBSCAN. Ces gènes sont probablement considérés comme du bruit ou isolés, car DBSCAN ne les associe à aucun cluster en raison de leur éloignement ou de la densité insuffisante des voisins à proximité.
----
-```{r,eval=F}
-fviz_pca_ind(pca_result_ind, col.ind=as.factor(res.db$cluster), geom="point")
+```{r, echo=FALSE}
+mg_res <- mclustICL(Data, G=2:20, modelNames = c("EVE", "EEV", "EVV", "VEV", "VVV"))
 ```
 
 ```{r}
-# Comparaison des résultats de K-means et DBSCAN
-clust1 <- paste("K-k", reskmeans$cluster, sep = "")
-clust2 <- paste("Dbscan-k", res.db$cluster, sep = "")
-table(clust1, clust2)
+fviz_cluster(mg_res, data = Data, ellipse = TRUE, geom = "point", main = "Clustering avec Mélange Gaussien (ICL)")
+#summary(mg_res)
+```
 
-# Visualisation sous forme de diagramme d’alluvion pour la comparaison des clusters
-Tab <- melt(table(clust1, clust2))
-ggplot(Tab, aes(y = value, axis1 = clust1, axis2 = clust2)) +
+
+
+### Comparaison des différents algorithmes
+
+#### Diagramme d'alluvion
+
+Nous allons ici comparer les trois méthodes de clustering réalisées précédemment en utilisant un diagramme d'alluvion.
+
+```{r, fig.height=3, echo=FALSE}
+# Comparaison des résultats des 3 méthodes
+clust1 <- paste("K-k", reskmeans$cluster, sep = "")
+clust2 <- paste("CH-k", cutree(hclust_res, k = 2), sep = "")
+clust3 <- paste("MG-k", mg_res$classification, sep = "")
+
+# Tableau de comparaison
+Tab <- melt(table(clust1, clust2, clust3))
+ggplot(Tab, aes(y = value, axis1 = clust1, axis2 = clust2, axis3 = clust3)) +
   geom_alluvium(aes(fill = clust1)) +
   geom_stratum(width = 1 / 12) +
   geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
@@ -435,38 +385,103 @@ ggplot(Tab, aes(y = value, axis1 = clust1, axis2 = clust2)) +
 
 ```
 
----
-Les courbes obtenues comparent les résultats des algorithmes K-means et DBSCAN. Le tableau de comparaison montre les correspondances et divergences entre les clusters identifiés par les deux méthodes. Le diagramme visualise ces relations : des flux larges entre les clusters indiquent une forte correspondance, tandis que des petits flux correspondent à des divergences, comme des points considérés comme bruit par DBSCAN mais regroupés par K-means. 
----
 
-# Clustering Hiérarchique (HAC)
+La première observation marquante est le flux important partant du cluster 1 des k-means vers le cluster de la classification hiérarchique, et se terminant dans les clusters 2, 3, et 4 du mélange gaussien. Cela suggère que les gènes sont classés de manière similaire dans les méthodes k-means et mélange gaussien, mais sont répartis dans 3 des 4 clusters du mélange gaussien.
 
-```{r}
-# Couper l'arbre à un certain nombre de clusters
-k <- 2  # Par exemple, couper l'arbre pour obtenir 2 clusters
-clusters <- cutree(hclust_res, k)
+### MCA sur les différentes méthodes
 
-# Visualisation du dendrogramme avec les couleurs des clusters
-plot(hclust_res, main = "Dendrogramme avec 2 clusters")
-rect.hclust(hclust_res, k = k, border = "red")  # Ajouter des boîtes rouges autour des clusters
+Une autre méthode de comparaison consiste à créer un tableau de contingence qui présente, pour chaque gène, les clusters obtenus selon les trois méthodes de clustering : k-means, classification hiérarchique, et mélanges gaussiens.
+
+```{r, fig.height=3, echo=FALSE, eval=FALSE, include=FALSE}
+library(kableExtra)
+table_kmeans <- table(reskmeans$cluster)
+table_hclust <- table(cutree(hclust_res, k = 2))
+table_mg <- table(mg_res$classification)
+
+table_kmeans_df <- as.data.frame(table_kmeans)
+table_hclust_df <- as.data.frame(table_hclust)
+table_mg_df <- as.data.frame(table_mg)
+
+colnames(table_kmeans_df) <- c("Cluster", "Nombre d'éléments")
+colnames(table_hclust_df) <- c("Cluster", "Nombre d'éléments")
+colnames(table_mg_df) <- c("Cluster", "Nombre d'éléments")
+
+kable(table_kmeans_df, col.names = c("Cluster", "Nombre d'éléments"), caption = "Tableau des tailles des clusters - K-means") 
+kable(table_hclust_df, col.names = c("Cluster", "Nombre d'éléments"), caption = "Tableau des tailles des clusters - Classification hiérarchique")
+kable(table_mg_df, col.names = c("Cluster", "Nombre d'éléments"), caption = "Tableau des tailles des clusters - Mélanges Gaussiens")
 
 ```
----
-Le dendrogramme montre que les groupes qui se fusionnent tôt sont très similaires, tandis que ceux qui se rejoignent plus tard présentent des différences plus marquées. On observe que le nombre optimal de clusters, égal à 2, est cohérent avec les résultats obtenus par DBSCAN et K-means. Cela suggère que les trois méthodes identifient une structure similaire dans les données, avec une séparation nette entre deux groupes principaux.
----
 
-```{r}
-library(pheatmap)
 
-# Créer une heatmap avec dendrogramme
-pheatmap(Data[1:20, ], cluster_rows = TRUE, cluster_cols = TRUE, main = "Heatmap avec Dendrogramme sur les 20 premiers gènes")
+```{r, echo=FALSE,fig.height=3}
+Kmeans = as.factor(reskmeans$cluster) 
+Melange = as.factor(mg_res$classification)  
+CAH = as.factor(cutree(hclust_res, k = 2)) 
+
+df.clustering = data.frame(
+  Kmeans = Kmeans,
+  Melange = Melange,
+  CAH = CAH
+)
+
+resMCA <- MCA(df.clustering, graph = FALSE) 
+habillage_var <- ifelse(grepl("Kmeans", rownames(resMCA$var$coord)), "Kmeans",
+                        ifelse(grepl("Melange", rownames(resMCA$var$coord)), "Melange", "CAH"))
+
+g1 <- fviz_mca_var(resMCA,
+             col.var = habillage_var,  
+             repel = TRUE,  
+             title = "MCA - Visualisation des Méthodes de Clustering",
+             ggtheme = theme_minimal())  
+
+g2 <- fviz_mca_var(resMCA, choice = "mca.cor",
+             repel = TRUE,
+             ggtheme = theme_minimal(),
+             title = "MCA - Corrélations des Méthodes de Clustering")
+grid.arrange(g1, g2, ncol=2, widths=c(2,1))
 ```
 
----
-La heatmap des 20 premiers gènes montre l'expression des gènes à travers différentes conditions, accompagnée de dendrogrammes qui regroupent les gènes et les conditions selon leurs profils d'expression. On remarque que les gènes du cluster en haut à droite, sont fortement corrélés avec les traitements 2 et 3. On peut en déduire que l'un des clusters regroupe principalement les gènes ayant subi les traitements 2 et 3, tandis que l'autre cluster correspond majoritairement aux gènes ayant subi le traitement 1.
----
+La première dimension est associée aux trois méthodes, tandis que la deuxième dimension semble être principalement influencée par k-means et le mélange gaussien. Les proximités observées entre les modalités sur le plan révèlent une forte association entre elles. Par exemple, on constate que le cluster 1 obtenu par k-means et le cluster 1 de la méthode hiérarchique sont très proches, ce qui suggère que plusieurs gènes classés dans le cluster 1 de k-means se retrouvent également dans le cluster 1 de la méthode hiérarchique. Cette observation confirme la comparaison réalisée à l'aide du diagramme d'alluvion.
 
 ## Etude des différences entre les deux réplicats
+
+### Lois de probabilités
+```{r}
+replicat1 <- as.vector(unlist(Data[, c(1:18)]))
+replicat2 <- as.vector(unlist(Data[, c(19:36)]))
+```
+
+```{r, echo=FALSE, fig.height=3}
+df_replicats <- data.frame(
+  value = c(replicat1, replicat2),
+  replicat = factor(rep(c("Réplicat 1", "Réplicat 2"), c(length(replicat1), length(replicat2))))
+)
+
+ggplot(df_replicats, aes(x = value, fill = replicat, color = replicat)) +
+  geom_density(alpha = 0.4, size = 1.2) +  
+  scale_fill_manual(values = c("blue", "red")) + 
+  scale_color_manual(values = c("blue", "red")) +
+  labs(title = "Comparaison des réplicats", x = "Valeur", y = "Densité") +  
+  theme_minimal() +  
+  theme(legend.position = "top")  
+```
+
+
+
+
+```{r, echo=FALSE}
+T1_R1 <- as.vector(unlist(Data[, c(1,6)]))
+T1_R2 <- as.vector(unlist(Data[, c(19,24)]))
+T2_R1 <- as.vector(unlist(Data[, c(7,12)]))
+T2_R2 <- as.vector(unlist(Data[, c(25,30)]))
+T3_R1 <- as.vector(unlist(Data[, c(13,18)]))
+T3_R2 <- as.vector(unlist(Data[, c(31,36)]))
+
+ks.test(replicat1, replicat2)
+ks.test(T1_R1, T1_R2)
+ks.test(T2_R1, T2_R2)
+ks.test(T3_R1, T3_R2)
+```
 
 Nous cherchons à étudier la différence entre les deux réplicats. Pour ce faire, nous définissons une nouvelle variable \( Y_{tsg} \) :
 $$
