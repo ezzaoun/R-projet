@@ -1,7 +1,14 @@
 ---
 title: "Projet_commun"
-output: pdf_document
+author: "Castello Emeline, Seye Papa Samba et Aoun Ezzeddine"
+output: 
+  pdf_document:
+    number_sections: true
+header-includes:
+  - \usepackage{float} 
 date: "2024-11-04"
+geometry: margin=1in
+fontsize: 10pt
 ---
 
 ```{css,echo=F}
@@ -24,7 +31,7 @@ knitr::opts_chunk$set(echo=TRUE,
                class.source="badCode")
 ```
 
-```{r,warning=F,message=F, echo = F}
+```{r,warning=F,message=F,echo=F}
 library(ggplot2)
 library(gridExtra)
 library(reshape2)
@@ -40,6 +47,10 @@ library(klaR)
 library(gridExtra)
 library(reshape2)
 library(clusterSim)
+library(pROC)
+library(tidyverse)
+library(leaps)
+library(float)
 ```
 
 ## Partie 1 - Analyse descriptivre du jeu de données
@@ -140,50 +151,50 @@ Les boxplots révèlent trois groupes distincts correspondant aux traitements T1
 
 Ces observations s’appliquent de manière presque symétrique aux deux réplicats, illustrant leur homogénéité générale.
 
-## Analyse des variables T_t s_H R_r
+# Analyse des variables T\_t s\_H R\_r
 
----
-On transpose les données pour pouvoir réaliser l’analyse des variables. 
----
+## Analyse des composantes principales
 
-```{r}
-# transformation du tableau 
-transData = t(Data)
-knitr::kable(transData)
-```
+Pour effectuer des analyses sur les variables, nous transposons notre jeu de données afin de considérer les variables initiales comme de nouveaux individus. Cette approche permet d'explorer les relations entre les variables et de visualiser leur structure dans un espace réduit. 
 
-```{r}
+Une Analyse en Composantes Principales (ACP) sera réalisée sur ce jeu de données transposé. L’objectif est d’identifier les vecteurs qui maximisent l’inertie de la projection des données sur ces vecteurs. Ces derniers correspondent aux vecteurs propres associés aux plus grandes valeurs propres de la matrice de covariance des données, représentant ainsi les axes principaux de l’ACP.
+
+Dans notre cas, il n'est pas nécessaire de réduire les données, car toutes les variables sont exprimées sur la même échelle.
+
+```{r ACP_variables,echo=F,fig.width=5, fig.height=4,fig.align='center',fig.cap="\\label{fig:AcpVar}Projection des individus",fig.pos='H'}
+# Transposition des données
+transData <- t(Data)
+
 # ACP sur les variables : transposée du tableau
-respca<-PCA(transData, scale.unit = T, graph=F)
+respca <- PCA(transData, scale.unit = FALSE, graph = FALSE)
 
-fviz_pca_ind(respca, 
-             #geom = "point", 
-             col.ind = "cos2", # Coloration selon la qualité de représentation
-             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-             repel = TRUE,
-             title = "Projection des gènes dans l'espace des composantes principales")
-
-fviz_pca_ind(respca, axes = c(1,2), geom = c("text", "point"), col.ind = rep(c(rep("T1", 6), rep("T2", 6), rep("T3", 6)),2), repel = TRUE, title = "ACP des individues regroupés par traitement")
-fviz_pca_ind(respca, axes = c(1,2), geom = c("text", "point"), col.ind = rep(c("1h","2h","3h","4h","5h", "6h"), 6), repel = TRUE, title = "ACP des individues regroupés par heure")
-
-fviz_pca_var(respca, 
-             col.var = "contrib", 
-             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
-             title = "Projection des variables dans l'espace des composantes principales")
-
-fviz_eig(respca)
+# Projection des individus dans l'espace des composantes principales
+fviz_pca_ind(
+  respca,
+  axes = c(1, 2),
+  geom = c("text", "point"),
+  col.ind = rep(c(rep("T1", 6), rep("T2", 6), rep("T3", 6)), 2),
+  repel = TRUE,
+  labelsize = 2, # Réduction de la taille des étiquettes
+  pointsize = 1  # Réduction de la taille des points
+)
 ```
-A partir du graphe des individus on observe :
+
+D'après la figure \ref{fig:AcpVar}, on observe :
+
 - Les réplicats (R1 et R2) montrent une cohérence, car ils se regroupent dans l’espace factoriel pour un même traitement et une même heure. Cela confirme que les variations observées dans les données sont principalement dues aux effets des traitements et des temps, et non à des différences techniques entre les réplicats.
-- Le traitement 1 se distingue clairement des traitements 2 et 3 en formant un cluster isolé. On peut interprété la première dimension comme la magnitude de la réponse des gènes aux traitements, opposant T1 (réponse quasi nulle) à T2 et T3 (réponses significatives). T2 et T3 sont plus proches l’un de l’autre, confirmant que T3 est dominé par T2.
-- La dimension 2 reflète l’évolution temporelle des réponses génétiques, avec une décroissance notable pour T2 et T3 au fil des heures. T1 reste stable sur cet axe, témoignant d'une absence d’effet temporel significatif.
+
+- Le traitement 1 se distingue des traitements 2 et 3 en formant un cluster isolé. L'axe 1 est tiré d'un coté par T1 à toutes les heures et dans les deux réplicats, et de l'autre coté par T2 et T3, surtout après 4h. On observe également des petits groupes isolés en haut, correspondants aux premières heures (1h, 2h, 3h) des traitements T2 et T3. Cela peut être interprété comme le passage d'un état où les gènes réagissent faiblement (à droite) à un état où ils commencent à répondre plus fortement au traitement. On peut interpéter Cette dimension comme le niveau d’expression des gènes.
+
+- La dimension 2 semble être liée à la temporalité, avec une décroissance des heures du haut vers le bas.
 
 ## Clustering :
-### Choix du nombre de classes :
-On trace l'inertie intraclasse en fonction du nombre de classes possibles et on identifie le nombre optimal de classes en repérant l'apparition du coude. Étant donné le faible nombre d'individus et leur répartition claire sur les axes principaux de l'ACP, on peut raisonnablement anticiper le nombre de classes attendu.
 
-```{r}
-# courbe du coude
+### Choix du nombre de classes 
+
+Pour identifier le nombre de classes pour notre clustering, nous allons tracer l'inertie intraclasse, ainsi que la courbe Silhouette en fonction du nombre de classes possibles.
+
+```{r nb_classes, echo=F,fig.width=5, fig.height=4,fig.align='center',fig.cap="\\label{fig:Silh}Sélection du nombre de classes optimal",fig.pos='H'}
 set.seed(1234)
 Kmax<-10
 reskmeanscl<-matrix(0,nrow=nrow(transData),ncol=Kmax-1)
@@ -193,13 +204,9 @@ for (k in 2:Kmax){
   reskmeanscl[,k-1]<-resaux$cluster
   Iintra<-c(Iintra,resaux$tot.withinss)
 }
-
 df<-data.frame(K=2:10,Iintra=Iintra)
-ggplot(df,aes(x=K,y=Iintra))+geom_line()+geom_point()+xlab("Nombre de classes")+ylab("Inertie intraclasse")
-# on peut voir qu'on a entre 3 ou 4 classes, ce qui est attendu vu le graphe de projection des individus de l'ACP
-```
+g1 = ggplot(df,aes(x=K,y=Iintra))+geom_line()+geom_point()+xlab("Nombre de classes")+ylab("Inertie intraclasse")
 
-```{r}
 # Silouhette
 Silhou<-NULL
 for (k in 2:Kmax){
@@ -208,38 +215,58 @@ for (k in 2:Kmax){
 }
 
 df<-data.frame(K=2:Kmax,Silhouette=Silhou)
-ggplot(df,aes(x=K,y=Silhouette))+
+g2 = ggplot(df,aes(x=K,y=Silhouette))+
   geom_point()+
   geom_line()+theme(legend.position = "bottom")
-
-aux<-silhouette(reskmeanscl[,2],dist(transData))
-fviz_silhouette(aux)+theme(plot.title = element_text(size =9))
-rm(df,Silhou,aux)
+grid.arrange(g1,g2,ncol=2)
 ```
 
-```{r}
-reskmeans<-kmeans(transData,centers = 3)
-fviz_cluster(reskmeans,transData,ellipse.type = "norm")
-fviz_pca_ind(respca,col.ind=as.factor(reskmeans$cluster))
+D'après la figure \ref{fig:Silh}, on observe un coude marqué à 3 ou 4 classes pour l'inertie intraclasse. Dilhouette indique un nombre optimal de classes égal à 2. Cependant, nous optons pour 4 classes, car la projection des individus obtenue par l'ACP révèle une distinction claire entre 4 groupes, ce qui facilite une interprétation pertinente de chaque classe.
+
+### Kmeans
+```{r kmeans, echo=F,fig.width=5, fig.height=4,fig.align='center',fig.cap="\\label{fig:kmeans}Clustering à 4 classes avec Kmeans",fig.pos='H'}
+reskmeans<-kmeans(transData,centers = 4)
+fviz_cluster(reskmeans,transData,ellipse.type = "norm",repel=T,labelsize = 7)
 ```
-### Modele de melanges :
+
+Sur la figure \ref{fig:kmeans}, on observe :
+
+- Une première classe regroupant les traitements T1 appliqués à toutes les heures pour les deux réplicats.
+
+- Une deuxième classe contenant T2 et T3 à 1h pour les deux réplicats, située très proche de la classe T1. Cela suggère qu'à 1h, les gènes n'ont pas eu suffisamment de temps pour réagir aux traitements, expliquant l'absence d'effet visible et leur proximité avec la classe T1.
+
+- Une troisième classe, composée de T2 et T3 à 2h et 3h pour les deux réplicats. À ce stade, les gènes commencent à réagir progressivement aux traitements. Cette classe se positionne à mi-chemin entre les classes avec une faible réaction et celle présentant une réaction significative.
+
+- Une quatrième classe, contenant T2 et T3 à des heures supérieures à 4h, où les gènes réagissent aux traitements, montrant un effet significatif.
+
+### Modèles de mélange 
+
 Pour effectuer un clustering basé sur un modèle de mélanges, nous utilisons les coordonnées issues de l'ACP comme matrice de données pour classer les variables $T_ts_HR_r$. Ce choix est motivé par la taille de la matrice de variance-covariance du jeu de données initial, qui est $p*p=2144*2144$. Une matrice aussi grande serait coûteuse en temps de calcul et ralentirait considérablement la convergence vers le mélange optimal. En utilisant les coordonnées principales, nous réduisons la dimension tout en préservant l'essentiel de l'information.
-```{r}
-Dataacp<-respca$ind$coord[,1:5]
 
+Nous gardons les 5 premières composantes principales ce qui représente plus de 95% de l’inertie.
+```{r nb_classes_mel, echo=F}
+Dataacp<-respca$ind$coord[,1:5]
 resICLall = mclustICL(Dataacp,G=2:20)
 summary(resICLall)
+```
+A partir des resultats observés, on va garder 8 classes de volume variant $(V)$, de même étendu $(E)$ et d'orientation libre $(V)$ puisque l'ICL correspondant est le maximum.
 
+```{r mel,echo=F,fig.width=3, fig.height=3,fig.align='center',fig.cap="\\label{fig:proba_boxplot}Les probabilités d'appartenance",fig.pos='H'}
 modICL = Mclust(Dataacp, G = 8,modelNames = "VEV")
 Aux = data.frame(label=paste("Cl",modICL$classification,sep=""),proba=apply(modICL$z,1,max))
 ggplot(Aux,aes(x=label,y = proba)) + geom_boxplot()
-fviz_cluster(modICL)
 
-adjustedRandIndex(modICL$classification,reskmeans$cluster)
-table(modICL$classification,reskmeans$cluster)
+classes_MEL = modICL$classification
+classes_kmeans = reskmeans$cluster
+table(classes_MEL,classes_kmeans)
+```
 
-clust1<-paste("MEL-k",modICL$classification,sep="")
-clust2<-paste("K-k",reskmeans$cluster,sep="")
+Les points sont parfaitement classés, comme en témoigne la figure \ref{fig:proba_boxplot}. Toutes les probabilités d'appartenance sont à 1.
+
+```{r lien,echo=F,fig.width=4, fig.height=3,fig.align='center',fig.cap="\\label{fig:lien_mel_kmeans}Lien entre la classification Kmeans et MEL",fig.pos='H'}
+clust1<-paste("K-k",reskmeans$cluster,sep="")
+clust2<-paste("MEL-k",modICL$classification,sep="")
+
 Tab<-melt(table(clust1,clust2))
 ggplot(Tab,aes(y=value,axis1=clust1,axis2=clust2))+
   geom_alluvium(aes(fill=clust1))+
@@ -248,23 +275,14 @@ ggplot(Tab,aes(y=value,axis1=clust1,axis2=clust2))+
   theme(legend.position = "none")
 ```
 
-```{r}
-hward<-hclust(dist(transData),method = "ward.D2")
-CH<-NULL
-Kmax<-20
-for (k in 2:Kmax){
-  CH<-c(CH,index.G1(transData,cutree(hward,k)))
-}
-daux<-data.frame(NbClust=2:Kmax,CH=CH)
-ggplot(daux,aes(x=NbClust,y=CH))+geom_line()+geom_point()
 
-ClustCH<-cutree(hward,k=2)
-fviz_dend(hward,k=2,show_labels = FALSE,rect = TRUE, rect_fill = TRUE,palette = "npg",rect_border = "npg",
-labels_track_height = 0.8)+ggtitle("")
-fviz_pca_ind(respca,geom=c("point"),col.ind=as.factor(ClustCH))
+La figure \ref{fig:lien_mel_kmeans} montre que les classes générées par le modèle de mélanges sont des sous-classes de celles définies par K-means, sans aucun chevauchement.
+
+```{r mel_ACP,echo=F,fig.width=4, fig.height=3,fig.align='center',fig.cap="\\label{fig:AcpVar_mel}Projection des individus classés par modèles de mélange",fig.pos='H'}
+fviz_pca_ind(respca,col.ind=as.factor(modICL$classification),repel=T,labelsize = 2)
 ```
 
-)
+D'après la figure \ref{fig:AcpVar_mel}, on voit que le modèle de mélanges affine davantage la distinction entre les variables en segmentant les classes initiales en sous-classes plus spécifiques. Cette classification permet d'extraire davantage d'informations sur l'expression des gènes en fonction du traitement. Elle révèle que, dans une classe obtenue par k-means, il est possible d'identifier deux ou trois sous-classes présentant une expression similaire.
 
 ## Analyse des individus Gènes
 ### Partie ACP des individus
@@ -483,29 +501,11 @@ ks.test(T2_R1, T2_R2)
 ks.test(T3_R1, T3_R2)
 ```
 
-Nous cherchons à étudier la différence entre les deux réplicats. Pour ce faire, nous définissons une nouvelle variable \( Y_{tsg} \) :
-$$
-Y_{tsg} = Y_{tsgR1} - Y_{tsgR2}
-$$
-L'objectif est de modéliser cette variable $Y_{tsg}$ en fonction de deux facteurs principaux :
-- Le temps : une variable quantitative.
-- Le traitement : une variable qualitative.
-Pour ce faire, nous utilisons un \textbf{modèle ANCOVA avec interaction}, qui permet de modéliser la relation entre la variable dépendante \( Y_{tsg} \) et les deux facteurs (temps et traitement), ainsi que leur interaction.
-$$
-Y_{tsg} = \beta_0 + \beta_1 \cdot Temps + \beta_2 \cdot Traitement + \beta_3 \cdot (Temps \times Traitement) + \epsilon_{tsg} ,\ t\in\{1,\ldots,3\} ,\ s\in\{1,\ldots,6\} ,\ g\in\{1,\ldots,2144\}.
-$$
-
----
-Les lois de probabilité associés aux valeurs observées pour les deux réplicats sont elles significativement différentes ? Même question en se concentrant sur chaque traitement pris séparément. --> Réponses à partir du cours de janvier
----
-
 ### Effet combiné du temps et du traitement 
 
 Nous cherchons à étudier l’effet combiné du temps et du traitement sur la différence des deux réplicats. Pour ce faire, nous définissons une nouvelle variable \( Y_{tsg} \) :
 $$
-Y_{tsg} = Y_{tsgR1} - Y_{tsgR2} 
-\\ 
-t\in\{1,\ldots,3\} ,\ s\in\{1,\ldots,6\} ,\ g\in\{1,\ldots,2144\}.
+Y_{tsg} = Y_{tsgR1} - Y_{tsgR2}, t\in\{1,\ldots,3\} ,\ s\in\{1,\ldots,6\} ,\ g\in\{1,\ldots,2144\}.
 $$
 L'objectif est de modéliser cette variable en fonction de deux facteurs principaux : le temps (variable quantitative) et le traitement (variable qualitative).
 
@@ -513,7 +513,8 @@ Pour ce faire, nous utilisons un \textbf{modèle ANCOVA avec interaction}, qui p
 $$
 Y_{tsg} = \beta_0 + \beta_1 \cdot Temps + \beta_2 \cdot Traitement + \beta_3 \cdot (Temps \times Traitement) + \epsilon_{tsg} 
 $$
-- $Temps$: Variable quantitative représentant le temps.\\
+- $Temps$: Variable quantitative représentant le temps.
+
 - $Traitement$: Variable catégorielle (0 ou 1) indiquant si le gène a été soumis au traitement.
 
 ```{r modele_ANCOVA,echo=F}
@@ -555,7 +556,7 @@ ML_no_inter = lm(Y~traitement+temps,data=matrix)
 summary(ML_no_inter)
 ```
 
-```{r courbe_inter,echo=F,fig.width=5, fig.height=4}
+```{r courbe_inter,echo=F,fig.width=5, fig.height=4,fig.align='center',fig.cap="\\label{fig:interaction}Interaction plot"}
 # Modèle sans interaction
 M_non_interaction <- lm(Y ~ traitement + temps, data = matrix)
 
@@ -654,12 +655,12 @@ M_1h_to_6h <- lm(Y_moy_6h~Y_moy_1h*traitement, data = matrixMoy)
 summary(M_1h_to_6h)
 ```
 
-```{r observed_fitted_plot, echo=F,fig.width=5, fig.height=3}
+```{r observed_fitted_plot, echo=F,fig.width=7, fig.height=4,fig.align='center',fig.cap="\\label{fig:obsVSpred1}Repésentation de la qualité du modèle"}
 # Prédictions à partir du modèle
 matrixMoy$Predicted <- predict(M_1h_to_6h, newdata = matrixMoy)
 
 # Tracé des valeurs observées (Y_moy_6h) par rapport aux valeurs prédites
-ggplot(matrixMoy, aes(x = Predicted, y = Y_moy_6h)) +
+g1 = ggplot(matrixMoy, aes(x = Predicted, y = Y_moy_6h)) +
   geom_point(aes(color = traitement), alpha = 0.6) +  # Points colorés par traitement
   geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +  # Ligne Y = X
   labs(
@@ -668,15 +669,9 @@ ggplot(matrixMoy, aes(x = Predicted, y = Y_moy_6h)) +
     y = "Valeurs observées"
   ) +
   theme_minimal()
-```
-
-On observe que les valeurs prédites sont principalement proches de 0, tandis que les valeurs observées, en particulier pour les traitements T2 et T3, diffèrent significativement de 0. Cela suggère que l'expression des gènes à 1h ne constitue pas un bon indicateur pour prédire celle à 6h.
-En effet, 1 heure représente un stade relativement précoce, et les gènes n'ont probablement pas eu suffisamment de temps pour réagir aux traitements. Par conséquent, il est difficile de faire des prédictions fiables sur l'expression génique à 6 heures en se basant sur des données obtenues à 1 heure.
-
-```{r Residuals_6h_1h,echo=F,fig.width=5, fig.height=3}
 fitted_vals <- fitted(M_1h_to_6h)
 residuals <- resid(M_1h_to_6h)
-ggplot(data = data.frame(Fitted = fitted_vals, Residuals = residuals), aes(x = Fitted, y = Residuals)) +
+g2 = ggplot(data = data.frame(Fitted = fitted_vals, Residuals = residuals), aes(x = Fitted, y = Residuals)) +
   geom_point(color = "blue", alpha = 0.6) + # Points des résidus
   geom_hline(yintercept = 0, linetype = "dashed", color = "red") + # Ligne à y = 0
   theme_minimal() + # Thème esthétique minimal
@@ -689,14 +684,17 @@ ggplot(data = data.frame(Fitted = fitted_vals, Residuals = residuals), aes(x = F
     plot.title = element_text(hjust = 0.5, size = 14),
     axis.title = element_text(size = 12)
   )
+grid.arrange(g1,g2,ncol=2)
 ```
+
+On observe que les valeurs prédites sont principalement proches de 0, tandis que les valeurs observées, en particulier pour les traitements T2 et T3, diffèrent significativement de 0. Cela suggère que l'expression des gènes à 1h ne constitue pas un bon indicateur pour prédire celle à 6h.
+En effet, 1 heure représente un stade relativement précoce, et les gènes n'ont probablement pas eu suffisamment de temps pour réagir aux traitements. Par conséquent, il est difficile de faire des prédictions fiables sur l'expression génique à 6 heures en se basant sur des données obtenues à 1 heure.
 
 Le graphique des résidus vs valeurs ajustées indique que notre modèle actuel présente des problèmes. La dispersion non uniforme des résidus suggère une hétéroscédasticité: la variabilité des erreurs n'est pas constante. De plus, la légère tendance non-linéaire des résidus indique que la relation entre les variables pourrait être plus complexe que ce que notre modèle linéaire simple ne capture.
 En d'autres termes, le modèle que nous utilisons actuellement ne semble pas être le plus adapté à nos données. Des ajustements sont nécessaires pour obtenir des résultats plus fiables.
 
-**Conclusion**
-
-Le modèle ajusté montre une qualité d'ajustement modérée, avec un R² de 27.06%. Les termes d’interaction entre Y1h et le traitement sont hautement significatifs (p<2e−16), ce qui montre que l’effet de $Y_{1h}$ sur $Y_{6h}$ varie selon le traitement. 
+**Conclusion**:
+Le modèle ajusté montre une qualité d'ajustement modérée, avec un R² de 27.06%. Les termes d’interaction entre $Y_{1h}$ et le traitement sont hautement significatifs (p<2e−16), ce qui montre que l’effet de $Y_{1h}$ sur $Y_{6h}$ varie selon le traitement. 
 En se basant sur les graphiques obtenus, le modèle que nous utilisons actuellement ne semble pas être le plus adapté à nos données. Des ajustements sont nécessaires pour obtenir des résultats plus fiables.
 
 ### A partir de l'expressions des gènes à 3h
@@ -734,7 +732,7 @@ Le modèle basé sur les données de 3h semble être plus performant que celui d
 
 On trace la courbe des valeurs observées par rapport aux valeurs prédites, ainsi que les résidus par rapport aux valeurs prédites.
 
-```{r observed_fitted,echo=F,fig.width=7,fig.height=4}
+```{r observed_fitted,echo=F,fig.width=7,fig.height=4,fig.align='center',fig.cap="\\label{fig:obsVSpred2}Repésentation de la qualité du modèle"}
 # Prédictions à partir du modèle
 matrixMoy2$Predicted <- predict(M_3h_to_6h, newdata = matrixMoy2)
 
