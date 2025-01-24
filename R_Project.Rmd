@@ -24,7 +24,7 @@ knitr::opts_chunk$set(echo=TRUE,
                class.source="badCode")
 ```
 
-```{r,warning=F,message=F}
+```{r,warning=F,message=F, echo = F}
 library(ggplot2)
 library(gridExtra)
 library(reshape2)
@@ -45,80 +45,67 @@ library(clusterSim)
 ## Partie 1 - Analyse descriptivre du jeu de données
 
 ## Statistique descriptive
-
---- 
 Le jeu de données étudié possède 2144 génes et 36 variables qualitatives associées.
-Nous allons dans un premier temps afficher ce jeu de données.
----
-```{r}
+```{r, eval =F}
 Data = read.table("DataProjet.txt", header =T)
 knitr::kable(Data)
 ```
 
----
+```{r, eval =T, echo = F}
+Data = read.table("DataProjet.txt", header =T)
+```
 Nous allons ensuite afficher la distribution des mesures d'expression des génes pour les différents traitement, réplicat et temps.
----
-```{r}
+```{r, eval = F}
 options(max.print = 1000)
 summary(Data)
 ```
+On trace ensuite les corrélations entre les différentes variables représenté dans la figure 1 : "Corrélation".
 
----
-On trace ensuite les corrélations entre les différentes variables
----
-
-```{r}
-corrplot(cor(Data), method = "ellipse")
+```{r, eval = T, echo = F, fig.width=3, fig.height=3, fig.align = "center", fig.cap = "Corrélation"}
+corrplot(cor(Data), method = "ellipse", tl.cex = 0.6)
 ```
 
----
-On remarque la répétition d’un même forme entre le réplicat 1 et 2. On remarque également que dans chacune de ces formes la présence de carrés plus foncés pour chaque corrélation des traitements avec eux-même et pour la corrélation entre le traitement 2 et 3. 
-Pour étudier plus en détaille ce graphique, on va extraire ces parties et expliquer chacune d'entre elles.
----
+Sur la Figure 1, on remarque la répétition d’un même forme entre le réplicat 1 et 2. On remarque également que dans chacune de ces formes la présence de carrés plus foncés pour chaque corrélation des traitements avec eux-même et pour la corrélation entre le traitement 2 et 3. Pour étudier plus en détaille ce graphique, on va extraire ces parties et expliquer chacune d'entre elles.
+Dans un premier temps, on va extraire la corrélation pour chaque traitement avec eux même et la réprésenter (cf Figure 2)
 
----
-On va extraire la corrélation pour chaque traitement avec eux même
----
-
-```{r}
-corrplot(cor(Data[,1:6]), method = "ellipse")
-corrplot(cor(Data[,7:12]), method = "ellipse")
-corrplot(cor(Data[,13:18]), method = "ellipse")
+```{r, eval = T, echo = F,fig.width=2, fig.height=2, fig.show='hold', fig.align = "center", results = "asis", fig.cap = "Corrélation pour chaque traitement avec eux même"}
+#par(mar = c(5,2,2,2))
+corrplot(cor(Data[,1:6]), method = "ellipse", tl.cex = 0.4, cl.cex = 0.3)
+corrplot(cor(Data[,7:12]), method = "ellipse", tl.cex = 0.4, cl.cex = 0.3)
+corrplot(cor(Data[,13:18]), method = "ellipse", tl.cex = 0.4, cl.cex = 0.3)
 ```
 
----
-On remarque que les heures ont une influence sur la corrélation. En effet, plus deux heures sont proches, plus la corrélation est élévée, ce qui montre l'évolution temporelle du traitement. Plus le traitement agit longtemps sur le gène, plus le traitement aura un effet important sur le gène.
+Sur la figure 2, on remarque que les heures ont une influence sur la corrélation. En effet, plus deux heures sont proches, plus la corrélation est élévée, ce qui montre l'évolution temporelle du traitement. Plus le traitement agit longtemps sur le gène, plus le traitement aura un effet important sur le gène.
+Ensuite, on va extraire la corrélation entre chaque traitement (cf Figure 3).
 
-On va ensuite extraire la corrélation entre chaque traitement.
----
-
-```{r}
-corrplot(cor(Data)[1:6,7:12], method = "ellipse")
-corrplot(cor(Data)[7:12, 13:18], method = "ellipse")
-corrplot(cor(Data)[13:18, 1:6], method = "ellipse")
+```{r,eval = T, echo = F,fig.width=2, fig.height=2,fig.show='hold', fig.align = "center", fig.cap = "Corrélation entre chaque traitement"}
+corrplot(cor(Data)[1:6,7:12], method = "ellipse", tl.cex = 0.4, cl.cex = 0.3)
+corrplot(cor(Data)[7:12, 13:18], method = "ellipse", tl.cex = 0.4, cl.cex = 0.3)
+corrplot(cor(Data)[13:18, 1:6], method = "ellipse", tl.cex = 0.4, cl.cex = 0.3)
 ```
 
----
-On observe que le traitement 2 et 3 sont plutot corrélé, supposant une l'efficacité similaire des deux traitements. Cependant, le traitement est peu corrélé avec le traitement 2 et 3, ce qui suppose encore une efficacité différente entre ces traitements.
+Sur la Figure 3, on observe que le traitement 2 et 3 sont plutot corrélé, supposant une efficacité similaire des deux traitements. Cependant, le traitement est peu corrélé avec le traitement 2 et 3, ce qui suppose encore une efficacité différente entre ces traitements.
+On extrait également la corrélation en fonction des réplicats (cf Figure 4).
 
-On extrait ensuite la corrélation en fonction des réplicats.
----
-
-```{r}
-corrplot(cor(Data)[c(19:24), c(1:6)], method = "ellipse")
-corrplot(cor(Data)[c(25:30), c(7:12)], method = "ellipse")
-corrplot(cor(Data)[c(31:36), c(13:18)], method = "ellipse")
+```{r, eval = T, echo = F,fig.width=2, fig.height = 2, fig.show='hold', fig.align = "center", fig.cap = "Corrélation en fonction des réplicats"}
+corrplot(cor(Data)[c(19:24), c(1:6)], method = "ellipse", tl.cex = 0.4, cl.cex = 0.3)
+corrplot(cor(Data)[c(25:30), c(7:12)], method = "ellipse", tl.cex = 0.4, cl.cex = 0.3)
+corrplot(cor(Data)[c(31:36), c(13:18)], method = "ellipse", tl.cex = 0.4, cl.cex = 0.3)
 ```
 
----
-On peut remarqué une corrélation importante entre les deux réplicat. Ainsi, une expérience produite deux fois renvoit des résultats qui sont corrélés entre eux. Cependant le traitement 2 et 3 pour les 2 réplicat sont plus corrélée à eux même que le traitement 1 ; ce qui suppose que le traitement 2 et 3 a une efficacité plus certaine que le traitement 1. 
-Pour le traitement 2 et 3, on remarque que sur la diagonale (même traitement même heure mais réplicat différent), les corrélations sont proche de 1 mais varie légèrement en fonction des heures, cela met l’accent sur les vitesses de réations variantes des traitements selon les gènes. 
----
+Sur la Figure 4, on peut remarqué une corrélation importante entre les deux réplicat. Ainsi, une expérience produite deux fois renvoit des résultats qui sont corrélés entre eux. Cependant le traitement 2 et 3 pour les 2 réplicat sont plus corrélée à eux même que le traitement 1 ; ce qui suppose que le traitement 2 et 3 a une efficacité plus certaine que le traitement 1. Pour le traitement 2 et 3, on remarque que sur la diagonale (même traitement même heure mais réplicat différent), les corrélations sont proche de 1 mais varie légèrement en fonction des heures, cela met l’accent sur les vitesses de réactions variantes des traitements selon les gènes. 
 
-```{r}
+
+```{r, eval = T, echo = F, fig.width=4, fig.height=2,fig.show='hold', fig.align = "center", fig.cap = "Boxplot des données"}
 ggplot(melt(Data), aes(x = variable, y = value)) + geom_boxplot() + labs(title = "Boxplot des données", x = "Variable", y = "Valeur (échelle standardisée)") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  theme(plot.title = element_text(size = 9),
+        axis.title.x = element_text(size = 7),
+        axis.title.y = element_text(size = 7),
+        axis.text = element_text(size = 5))
+```
 
+```{r, eval = T, echo = F, fig.show='hold', fig.width=4,fig.height=2, fig.align = "center", fig.cap = "Distribution des Expression par Réplicat"}
 # violin plot pour mieux visualiser 
 data_long <- melt(Data, 
                   variable.name = "Condition", 
@@ -137,10 +124,14 @@ ggplot(data_long, aes(x = Time, y = Expression, fill = Treatment)) +
        x = "Temps",
        y = "Expression",
        fill = "Traitement") +
-  theme_minimal()
+  theme_minimal() +
+  theme(plot.title = element_text(size = 9),
+        axis.title.x = element_text(size = 7),
+        axis.title.y = element_text(size = 7),
+        axis.text = element_text(size = 5))
 ```
 
-D’abord, on observe une distinction nette entre les réplicats R1 et R2, témoignant d’une périodicité dans les valeurs d'expression. Ce phénomène s'explique par le fait que les mêmes gènes sont soumis aux mêmes traitements et conditions pour chaque réplicat, bien que des variations aléatoires introduisent de légères différences.
+Sur la Figure 5, d’abord, on observe une distinction nette entre les réplicats R1 et R2, témoignant d’une périodicité dans les valeurs d'expression. Ce phénomène s'explique par le fait que les mêmes gènes sont soumis aux mêmes traitements et conditions pour chaque réplicat, bien que des variations aléatoires introduisent de légères différences.
 
 Les boxplots révèlent trois groupes distincts correspondant aux traitements T1, T2, et T3.
 - Pour le traitement T1, les médianes sont proches de 0, ce qui suggère une faible réaction des gènes ou l’absence d’un effet global mesurable. Les boîtes étroites et la faible variabilité confirment que la réponse des gènes reste homogène.
