@@ -484,33 +484,36 @@ $$
 Les lois de probabilité associés aux valeurs observées pour les deux réplicats sont elles significativement différentes ? Même question en se concentrant sur chaque traitement pris séparément. --> Réponses à partir du cours de janvier
 ---
 
----
-Consigne : Etudier l'effet combiné du temps et du traitement sur la différence des réplicats à l'aide d'un modèle linéaire
----
+### Effet combiné du temps et du traitement 
 
-```{r}
+Nous cherchons à étudier l’effet combiné du temps et du traitement sur la différence des deux réplicats. Pour ce faire, nous définissons une nouvelle variable \( Y_{tsg} \) :
+$$
+Y_{tsg} = Y_{tsgR1} - Y_{tsgR2} 
+\\ 
+t\in\{1,\ldots,3\} ,\ s\in\{1,\ldots,6\} ,\ g\in\{1,\ldots,2144\}.
+$$
+L'objectif est de modéliser cette variable en fonction de deux facteurs principaux : le temps (variable quantitative) et le traitement (variable qualitative).
+
+Pour ce faire, nous utilisons un \textbf{modèle ANCOVA avec interaction}, qui permet de modéliser la relation entre la variable dépendante \( Y_{tsg} \) et les deux facteurs (temps et traitement), ainsi que leur interaction.
+$$
+Y_{tsg} = \beta_0 + \beta_1 \cdot Temps + \beta_2 \cdot Traitement + \beta_3 \cdot (Temps \times Traitement) + \epsilon_{tsg} 
+$$
+- $Temps$: Variable quantitative représentant le temps.\\
+- $Traitement$: Variable catégorielle (0 ou 1) indiquant si le gène a été soumis au traitement.
+
+```{r modele_ANCOVA,echo=F}
 # Etape 1 : On effectue la différence des réplicats
 p = ncol(Data)
-#ncol(Data[,1:(p/2)])
-#ncol(Data[,(p/2 + 1):p])
+
 Data_Diff_R = Data[,1:(p/2)] - Data[,((p/2) + 1):p]
 colnames(Data_Diff_R) <- sub("_[^_]*$", "", colnames(Data[,1:(p/2)]))
-knitr::kable(Data_Diff_R)
-```
 
-```{r}
-#Etape 2 : Création de Yij de telle sorte que Y_ij = Y_tsg (l'ordre est traitement, temps et gènes)
+#Etape 2 : Création de Yij de telle sorte que Y_ij = Y_tsg
 Y = as.vector(as.matrix(Data_Diff_R))
-```
 
-```{r}
 #Etape 3 : Création des noms de lignes du vecteur Y
 noms_Y <- outer(colnames(Data_Diff_R), rownames(Data_Diff_R), paste, sep="_")
 noms_Y <- as.vector(t(noms_Y))
-
-# Vérification des dimensions
-length(noms_Y)
-length(Y)
 
 #Etape 4 : Création du vecteur traitement et temps
 traitement <- sub("_.*", "", noms_Y)
@@ -520,32 +523,24 @@ temps <- as.numeric(sapply(strsplit(noms_Y, "[_h]"), function(x) x[2]))
 matrix = as.data.frame(cbind(Y, traitement, temps))
 matrix$temps <- as.numeric(matrix$temps)
 matrix$Y <- as.numeric(matrix$Y)
-```
 
-```{r}
 rownames(matrix) <- noms_Y
-knitr::kable(matrix)
 ```
 
-```{r}
-# Modèle ANCOVA à 2 facteur avec intéraction
-ML <- lm(matrix$Y~matrix$traitement*matrix$temps, data = matrix)
+
+```{r Model, echo=F,include=F}
+ML <- lm(Y~traitement*temps, data = matrix)
 summary(ML)
-boxplot(matrix$Y~matrix$traitement*matrix$temps, data =matrix)
 ```
 
-```{r}
-# Modèle ANCOVA à 2 facteur sans intéractions
-ML_sans_interaction = lm(matrix$Y~matrix$traitement+matrix$temps, data = matrix)
-summary(ML_sans_interaction)
-boxplot(matrix$Y~matrix$traitement+matrix$temps, data =matrix)
+On établit le modèle sans intéraction
+
+```{r Model_sans_inter, echo=F,include=F}
+ML_no_inter = lm(Y~traitement+temps,data=matrix)
+summary(ML_no_inter)
 ```
 
-```{r}
-# Courbes d'interactions
-library(ggplot2)
-library(gridExtra)
-
+```{r courbe_inter,echo=F,fig.width=5, fig.height=4}
 # Modèle sans interaction
 M_non_interaction <- lm(Y ~ traitement + temps, data = matrix)
 
@@ -583,29 +578,34 @@ plot_interaction <- ggplot(new_data, aes(x = temps, y = Y_interaction, color = t
 # Affichage côte à côte
 grid.arrange(plot_non_interaction, plot_interaction, ncol = 2)
 ```
-Dans le modèle sans interaction, les courbes sont parallèles, reflétant l'absence d'interdépendance entre le traitement et le temps. En revanche, dans le modèle avec interaction, les courbes montrent des variations de pente ou des croisements, indiquant une interaction significative entre ces deux variables. À partir de ces deux représentations, un test de sous-modèle est effectué pour déterminer si l'interaction doit être conservée dans le modèle final.
 
----
-On commence à tester l'hypothèse de non-intéraction entre le facteur traitement et le variable temps.
----
+Dans le modèle sans interaction, les courbes sont parallèles, reflétant l'absence d'interdépendance entre le traitement et le temps. En revanche, dans le modèle avec interaction, les courbes montrent des variations de pente ou des croisements, indiquant une présence probable d'interaction entre ces deux variables. À partir de ces deux représentations, un test de sous-modèle est effectué pour déterminer si l'interaction doit être conservée dans le modèle final.
 
-```{r}
-# Comparaison du modèle ANCOVA avec intéractions et sans intéractions
-anova(ML, ML_sans_interaction)
+```{r Compare_modeles, echo=F}
+anova(ML_no_inter,ML)
 ```
+La p-valeur obtenue est de $1.426e-15<0.05$. Cela conduit à rejeter largement l'hypothèse nulle et à privilégier le modèle avec interaction.
 
----
-La p-valeur observée est inférieur à 5% (1.426e-15 < 0.05). On rejette donc l'hypothèse de nullité des intéractions.
-On conclut donc la présence d'intéraction dans le modèle; tester l'absence de facteur traitement et de variable temps n'a donc pas d'intéret, car toute variable constituant une interaction doit apparaître dans le modèle.
----
+## Pédiction de l’expression des gènes à 6h
 
+### A partir de l'expressions des gènes à 1h
 
----
-Consigne : Peut-on prévoir l’expression des gènes à 6h à partir de celle observée à 1h et du traitement
-considéré ? Commenter la qualité de l’ajustement et la visualiser graphiquement.
----
+Nous avons calculé la moyenne des réplicats pour chaque gène et chaque temps, notée $Y_{tsgMoy}$. Un modèle ANCOVA avec interaction a été ajusté pour prédire l'expression finale (à t=6h) en fonction de l'expression initiale (à t=1h) et du traitement :
+$$
+Y_{t6hgMoy} = \beta_0 + \beta_1 \cdot Y_{t1hgMoy} + \beta_2 \cdot Traitement + \beta_3 \cdot (Y_{t1hgMoy} \times Traitement) + \epsilon_{tsg}
+$$
+où :
 
-```{r}
+- $Y_{t6hgMoy}$ est l'expression moyenne du gène g au temps t=6h.
+
+- $Y_{t1hgMoy}$ est l'expression moyenne du gène g au temps t=1h (expression initiale).
+
+- Traitement : est une variable indicatrice (0 ou 1) indiquant si le gène a été soumis au traitement.
+
+- Les coefficients $\beta$ représentent les effets respectifs de l'ordonnée à l'origine, de l'expression initiale, du traitement et de l'interaction entre l'expression initiale et le traitement.
+
+- $\epsilon_{tsg}$ est un terme d'erreur aléatoire.
+```{r Ancova_6h_1h,echo=F}
 # extraire les Y à 1h et créer une matrice
 p = ncol(Data)
 Data_moy_R = (Data[,1:(p/2)] + Data[,((p/2) + 1):p])/2
@@ -613,10 +613,10 @@ Data_moy_R_1h = Data_moy_R[,c(1,7,13)]
 Data_moy_R_6h = Data_moy_R[,c(6,12,18)]
 
 colnames(Data_moy_R_1h) <- sub("_[^_]*$", "", colnames(Data_moy_R_1h))
-#knitr::kable(Data_moy_R_1h)
+
 
 colnames(Data_moy_R_6h) <- sub("_[^_]*$", "", colnames(Data_moy_R_6h))
-#knitr::kable(Data_moy_R_6h)
+
 
 Y_moy_1h = as.vector(as.matrix(Data_moy_R_1h))
 Y_moy_6h = as.vector(as.matrix(Data_moy_R_6h))
@@ -632,12 +632,14 @@ traitement <- sub("_.*", "", noms_Y)
 matrixMoy = as.data.frame(cbind(Y_moy_6h, Y_moy_1h, traitement))
 matrixMoy$Y_moy_1h <- as.numeric(matrixMoy$Y_moy_1h)
 matrixMoy$Y_moy_6h <- as.numeric(matrixMoy$Y_moy_6h)
-
-knitr::kable(matrixMoy)
 ```
 
+```{r Model_6h_1h,echo=F,include=F}
+M_1h_to_6h <- lm(Y_moy_6h~Y_moy_1h*traitement, data = matrixMoy)
+summary(M_1h_to_6h)
+```
 
-```{r}
+```{r observed_fitted_plot, echo=F,fig.width=5, fig.height=3}
 # Prédictions à partir du modèle
 matrixMoy$Predicted <- predict(M_1h_to_6h, newdata = matrixMoy)
 
@@ -652,45 +654,45 @@ ggplot(matrixMoy, aes(x = Predicted, y = Y_moy_6h)) +
   ) +
   theme_minimal()
 ```
+
 On observe que les valeurs prédites sont principalement proches de 0, tandis que les valeurs observées, en particulier pour les traitements T2 et T3, diffèrent significativement de 0. Cela suggère que l'expression des gènes à 1h ne constitue pas un bon indicateur pour prédire celle à 6h.
 En effet, 1 heure représente un stade relativement précoce, et les gènes n'ont probablement pas eu suffisamment de temps pour réagir aux traitements. Par conséquent, il est difficile de faire des prédictions fiables sur l'expression génique à 6 heures en se basant sur des données obtenues à 1 heure.
 
-```{r}
-M_1h_to_6h <- lm(Y_moy_6h~Y_moy_1h*traitement, data = matrixMoy)
-summary(M_1h_to_6h)
-# tracer les courbes des valeurs predites vs les valeurs observées
-# calculer les theta chapeau pour voir la difference (courbe residuals)
+```{r Residuals_6h_1h,echo=F,fig.width=5, fig.height=3}
+fitted_vals <- fitted(M_1h_to_6h)
+residuals <- resid(M_1h_to_6h)
+ggplot(data = data.frame(Fitted = fitted_vals, Residuals = residuals), aes(x = Fitted, y = Residuals)) +
+  geom_point(color = "blue", alpha = 0.6) + # Points des résidus
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") + # Ligne à y = 0
+  theme_minimal() + # Thème esthétique minimal
+  labs(
+    title = "Residuals vs Fitted Values",
+    x = "Fitted Values",
+    y = "Residuals"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14),
+    axis.title = element_text(size = 12)
+  )
 ```
 
+Le graphique des résidus vs valeurs ajustées indique que notre modèle actuel présente des problèmes. La dispersion non uniforme des résidus suggère une hétéroscédasticité: la variabilité des erreurs n'est pas constante. De plus, la légère tendance non-linéaire des résidus indique que la relation entre les variables pourrait être plus complexe que ce que notre modèle linéaire simple ne capture.
+En d'autres termes, le modèle que nous utilisons actuellement ne semble pas être le plus adapté à nos données. Des ajustements sont nécessaires pour obtenir des résultats plus fiables.
 
-```{r}
-#par(mfrow = c(2, 2))
-plot(M_1h_to_6h)
-```
+**Conclusion**
 
+Le modèle ajusté montre une qualité d'ajustement modérée, avec un R² de 27.06%. Les termes d’interaction entre Y1h et le traitement sont hautement significatifs (p<2e−16), ce qui montre que l’effet de $Y_{1h}$ sur $Y_{6h}$ varie selon le traitement. 
+En se basant sur les graphiques obtenus, le modèle que nous utilisons actuellement ne semble pas être le plus adapté à nos données. Des ajustements sont nécessaires pour obtenir des résultats plus fiables.
 
-```{r}
-M_1h_to_6h_no_inter <- lm(Y_moy_6h ~ Y_moy_1h + traitement, data = matrixMoy)
-anova(M_1h_to_6h_no_inter, M_1h_to_6h)
-```
-le test indique que l’ajout de l’interaction améliore significativement le modèle (p-valeur < 0.05), cela suggère que :
-- L’effet de Y_1h sur Y_6h varie selon les traitements.
-- L’interaction entre Y_1h et le traitement est pertinente.
+### A partir de l'expressions des gènes à 3h
 
-### Conclusion
-Le modèle ajusté montre une qualité d'ajustement modérée, avec un R2R2 de 27.06%, indiquant que 27% de la variance de Y6hY6h​ est expliquée par Y1hY1h​ et le traitement. Les termes d’interaction entre Y1hY1h​ et le traitement sont hautement significatifs (p<2e−16p<2e−16), ce qui montre que l’effet de Y1hY1h​ sur Y6hY6h​ varie selon le traitement. Les graphiques des résidus confirment que les hypothèses de linéarité et de normalité sont globalement respectées, bien que le modèle laisse une part importante de la variance inexpliquée. Cela suggère que Y1hY1h​ et les traitements contribuent à l’évolution temporelle de Y6hY6h​, mais d’autres facteurs pourraient être impliqués.
-
----
-Consigne : Reprendre la question précédente en remplaçant 1h par 3h et comparer les résultats obtenus dans
-les deux cas.
----
-```{r}
+Nous souhaitons prédire $Y_{6h}$ en utilisant $Y_{3h}$ comme variable explicative principale. Pour ce faire, nous allons reprendre le modèle précédent et l'adapter en remplaçant toutes les variables correspondant aux données au temps $1h$ par leurs équivalents au temps $3h$. 
+```{r Ancova_6h_3h,echo=F}
 p = ncol(Data)
 
 Data_moy_R_3h = Data_moy_R[,c(3,9,15)]
 
 colnames(Data_moy_R_3h) <- sub("_[^_]*$", "", colnames(Data_moy_R_3h))
-#knitr::kable(Data_moy_R_3h)
 
 Y_moy_3h = as.vector(as.matrix(Data_moy_R_3h))
 
@@ -702,17 +704,28 @@ matrixMoy2 = as.data.frame(cbind(Y_moy_6h, Y_moy_3h, traitement))
 matrixMoy2$Y_moy_6h <- as.numeric(matrixMoy2$Y_moy_6h)
 matrixMoy2$Y_moy_3h <- as.numeric(matrixMoy2$Y_moy_3h)
 
-knitr::kable(matrixMoy2)
 ```
 
 
-```{r}
+```{r Model_6h_3h, echo=F,include=F}
+M_3h_to_6h <- lm(Y_moy_6h~Y_moy_3h*traitement, data = matrixMoy2)
+summary(M_3h_to_6h)
+```
+- Residual Standard Error (RSE) : 1.168
+- R² ajusté : 0.770
+- La variance expliquée est beaucoup plus élevée, indiquant que les prédictions du modèle pour les données à 3h sont nettement meilleures.
+
+Le modèle basé sur les données de 3h semble être plus performant que celui de 1h, avec un R² ajusté presque trois fois supérieur et un RSE significativement plus faible. Cela signifie que les valeurs à 3h prédisent mieux les valeurs à 6h.
+
+On trace la courbe des valeurs observées par rapport aux valeurs prédites, ainsi que les résidus par rapport aux valeurs prédites.
+
+```{r observed_fitted,echo=F,fig.width=7,fig.height=4}
 # Prédictions à partir du modèle
 matrixMoy2$Predicted <- predict(M_3h_to_6h, newdata = matrixMoy2)
 
 # Tracé des valeurs observées (Y_moy_6h) par rapport aux valeurs prédites
 library(ggplot2)
-ggplot(matrixMoy2, aes(x = Predicted, y = Y_moy_6h)) +
+g1 = ggplot(matrixMoy2, aes(x = Predicted, y = Y_moy_6h)) +
   geom_point(aes(color = traitement), alpha = 0.6) +  # Points colorés par traitement
   geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") +  # Ligne Y = X
   labs(
@@ -721,32 +734,25 @@ ggplot(matrixMoy2, aes(x = Predicted, y = Y_moy_6h)) +
     y = "Valeurs observées"
   ) +
   theme_minimal()
-```
-Modèle 3h :
-- Residual Standard Error (RSE) : 1.168
-- R² ajusté : 0.770
-- La variance expliquée est beaucoup plus élevée, indiquant que les prédictions du modèle pour les données à 3h sont nettement meilleures.
-
-Interprétation :
-Le modèle basé sur les données de 3h est nettement plus performant que celui de 1h, avec un R² ajusté presque trois fois supérieur et un RSE significativement plus faible. Cela signifie que les valeurs à 3h expliquent beaucoup mieux les valeurs à 6h.
-On peut voir aussi que les valeurs predites correspondent aux valeurs observés. On a donc une meilleure prédiction comparé au modele precedent
-
-```{r}
-M_3h_to_6h <- lm(Y_moy_6h~Y_moy_3h*traitement, data = matrixMoy2)
-summary(M_3h_to_6h)
-```
-
-
-```{r}
-par(mfrow = c(2, 2))
-plot(M_3h_to_6h)
+new_fitted_vals <- fitted(M_3h_to_6h)
+new_residuals <- resid(M_3h_to_6h)
+g2 = ggplot(data = data.frame(Fitted = new_fitted_vals, Residuals = new_residuals), aes(x = Fitted, y = Residuals)) +
+  geom_point(color = "blue", alpha = 0.6) + # Points des résidus
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") + # Ligne à y = 0
+  theme_minimal() + # Thème esthétique minimal
+  labs(
+    title = "Residuals vs Fitted Values",
+    x = "Fitted Values",
+    y = "Residuals"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14),
+    axis.title = element_text(size = 12)
+  )
+grid.arrange(g1,g2,ncol=2)
 ```
 
-
-```{r}
-M_3h_to_6h_no_inter <- lm(Y_moy_6h ~ Y_moy_3h + traitement, data = matrixMoy2)
-anova(M_3h_to_6h_no_inter, M_3h_to_6h)
-```
+On observe que les valeurs prédites s'alignent bien avec les valeurs observées, et que les résidus sont plus uniformément dispersés autour de 0. Cela indique une amélioration notable de la qualité des prédictions par rapport au modèle précédent.
 
 
 
