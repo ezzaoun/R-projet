@@ -751,46 +751,33 @@ anova(M_3h_to_6h_no_inter, M_3h_to_6h)
 
 
 ## Etude de l’expression des gènes pour le traitement T3 à 6h :
----
-Consigne : Quelles sont les variables prédictives pour le traitement T3 à 6h parmi les différents temps observés
-pour les traitements T1 et T2 ?
----
 
-```{r}
+```{r MLG, echo=F,include=F}
 # Matrice moyenne des replicats
 p = ncol(Data)
 Moy_Rep = (Data[,1:(p/2)] + Data[,((p/2) + 1):p])/2
 colnames(Moy_Rep) <- sub("_[^_]*$", "", colnames(Data[,1:(p/2)]))
-#knitr::kable(Moy_Rep)
 
 modele_T3_all <- lm(T3_6h ~ T1_1h + T1_2h + T1_3h + T1_4h + T1_5h + T1_6h +
                       T2_1h + T2_2h + T2_3h + T2_4h + T2_5h + T2_6h, 
                     data = Moy_Rep)
 summary(modele_T3_all)
-
-mod.AIC = stepAIC(modele_T3_all,direction="backward")
-# vif(modele_T3_all) # Calculer les facteurs d'inflation de la variance
 ```
 
 
-```{r}
-library(reshape2)
-library(ggplot2)
-cor_matrix <- cor(Moy_Rep[, c("T3_6h", "T1_1h", "T1_2h", "T1_3h", "T1_4h", 
-                           "T1_5h", "T1_6h", "T2_1h", "T2_2h", "T2_3h", 
-                           "T2_4h", "T2_5h", "T2_6h")])
+```{r Selection, echo=F}
+choix = regsubsets(T3_6h~T1_1h + T1_2h + T1_3h + T1_4h + T1_5h + T1_6h +
+                      T2_1h + T2_2h + T2_3h + T2_4h + T2_5h + T2_6h,data=Moy_Rep,nbest=1,nvmax=11,method="backward")
+plot(choix,scale="Cp")
 
-# Convertir en format long
-cor_long <- melt(cor_matrix)
+new_modele_T3_all <- lm(T3_6h ~ T1_1h + T1_2h + T1_3h + T1_4h + T1_6h +
+                      T2_2h + T2_3h + T2_4h + T2_5h + T2_6h, 
+                    data = Moy_Rep)
+anova(new_modele_T3_all,modele_T3_all)
+```
 
-# Créer une heatmap
-ggplot(cor_long, aes(Var1, Var2, fill = value)) +
-  geom_tile(color = "white") +
-  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0) +
-  theme_minimal() +
-  labs(title = "Corrélation entre Y_T3_6h et les autres variables", 
-       x = "Variables", y = "Variables")
 
+```{r coeff,fig.width=5,fig.height=3,echo=F}
 # Extraire les coefficients significatifs
 coef_model <- summary(modele_T3_all)$coefficients
 coef_df <- data.frame(
@@ -808,14 +795,10 @@ ggplot(coef_df, aes(x = reorder(Variable, Coefficient), y = Coefficient)) +
   coord_flip() +
   theme_minimal() +
   labs(title = "Coefficients significatifs du modèle", x = "Variable", y = "Coefficient")
-
-new_modele_T3_all <- lm(T3_6h ~ T1_1h + T1_2h + T1_3h + T1_4h + T1_6h +
-                      T2_2h + T2_3h + T2_4h + T2_5h + T2_6h, 
-                    data = Moy_Rep)
-anova(new_modele_T3_all,modele_T3_all)
 ```
 
-```{r}
+
+```{r predict,fig.width=7,fig.height=4,echo=F}
 tmp = Moy_Rep
 tmp$Predicted <- predict(new_modele_T3_all, newdata = tmp)
 ggplot(tmp, aes(x = Predicted, y = T3_6h)) +
@@ -829,13 +812,13 @@ ggplot(tmp, aes(x = Predicted, y = T3_6h)) +
   theme_minimal()
 ```
 
----
+
 Consigne : Peut-on prédire les gènes sur-exprimés (codés 1) et les gènes sous-exprimés (codés 0) à 6h pour le
 traitement T3 à partir des observations pour les traitements T1 et T2 et les heures 1 à 3 pour ces
 mêmes gènes ?
----
 
-```{r}
+
+```{r, echo=F,include=F}
 # Filtrer les données en excluant les valeurs intermédiaires (-1 <= T3_6h <= 1)
 x = Moy_Rep[Moy_Rep$T3_6h < 1 & Moy_Rep$T3_6h > -1, ]
 # 8 genes non classés
@@ -843,6 +826,7 @@ filtered_data <- Moy_Rep[Moy_Rep$T3_6h < -1 | Moy_Rep$T3_6h > 1, ]
 # Définir la colonne target selon les critères donnés
 filtered_data$target <- as.factor(ifelse(filtered_data$T3_6h > 1, 1, 0))
 filtered_data <- filtered_data[, c("T1_1h", "T1_2h", "T1_3h", "T2_1h", "T2_2h", "T2_3h","target")]
+
 table(filtered_data$target)
 
 model <- glm(filtered_data$target ~. , data = filtered_data, family = "binomial")
@@ -852,11 +836,25 @@ summary(model)
 step.backward = step(model, direction="backward",k=log(nrow(filtered_data)))
 
 bestmodel = glm(filtered_data$target ~T2_2h + T1_2h +T1_3h + T2_3h , data = filtered_data, family = "binomial")
-anova(model,bestmodel)
+anova(bestmodel,model)
 ```
 
+```{r, echo=F}
+l<-1000
+# pour ne pas prendre des données rangées pour le test (qui viennent apres ceux d'apprentissage)
+perm<-sample(nrow(filtered_data))
+# Echantillon d'apprentissage
+dapp<-filtered_data[perm[1:l],]
+# Echantillon test
+dtest<-filtered_data[-perm[1:l],]
+# Estimation du modèle sur l'échantillon d'apprentissage
+modelapp<-glm(target ~. , family = "binomial",data=dapp)
+# Prédictions sur l'échantillon test
+prev<-predict(modelapp,newdata=dtest,type="response")
 
-```{r}
+roc_curve1 <- roc(dtest$target, prev)
+plot(roc_curve1, main = "Courbe ROC", col = "blue", lwd = 2)
+
 # Prédire sur les données de test ou validation
 predictions <- predict(model, newdata = filtered_data, type = "response")
 
@@ -871,4 +869,74 @@ roc_curve <- roc(filtered_data$target, predictions)
 plot(roc_curve, main = "Courbe ROC", col = "blue", lwd = 2)
 auc_value <- auc(roc_curve)
 print(paste("AUC:", auc_value))
+
+```
+
+
+
+```{r, echo=F}
+model_inter <- glm(filtered_data$target ~(.)^2 , data = filtered_data, family = "binomial")
+summary(model_inter)
+
+modelbestinter = step(model_inter,trace=F)
+modelbestinter
+```
+
+
+Consigne : Le caractère sur exprimé/sous exprimé/non exprimé des gènes à 6h dépend-il du traitement ? Même
+question si on se limite aux traitements T2 et T3.
+
+pour chaque traitement, on prend les reponses des genes à 6h et on cree un data frame 
+```{r, echo=F}
+moy_rep_6h = Moy_Rep[c(6,12,18)]
+#knitr::kable(moy_rep_6h)
+
+categorize <- function(x) {
+  ifelse(x > 1, "Sur-exprimé", ifelse(x < -1, "Sous-exprimé", "Non exprimé"))
+}
+
+categories <- data.frame(
+  T1 = apply(moy_rep_6h[, "T1_6h", drop = FALSE], 1, categorize),
+  T2 = apply(moy_rep_6h[, "T2_6h", drop = FALSE], 1, categorize),
+  T3 = apply(moy_rep_6h[, "T3_6h", drop = FALSE], 1, categorize)
+)
+#knitr::kable(categories)
+# Tableau de contingence
+table_contingence <- table(stack(categories))
+print(table_contingence)
+
+# Test du Chi-2
+chisq_test <- chisq.test(table_contingence)
+print(chisq_test)
+```
+
+
+```{r, echo=F}
+# Filtrer pour T2 et T3
+categories_T2_T3 <- categories[, c("T2", "T3")]
+
+# Tableau de contingence pour T2 et T3
+table_T2_T3 <- table(stack(categories_T2_T3))
+
+# Test du Chi-2 pour T2 et T3
+chisq_test_T2_T3 <- chisq.test(table_T2_T3)
+print(chisq_test_T2_T3)
+
+```
+
+
+```{r, echo=F}
+library(ggplot2)
+
+# Préparer les données pour ggplot
+plot_data <- as.data.frame(table_contingence)
+colnames(plot_data) <- c("Category", "Treatment", "Count")
+
+# Visualisation
+ggplot(plot_data, aes(x = Treatment, y = Count, fill = Category)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Distribution des gènes par catégorie et traitement",
+       x = "Traitement",
+       y = "Nombre de gènes") +
+  theme_minimal()
 ```
