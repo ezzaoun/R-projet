@@ -370,15 +370,29 @@ Le dendrogramme montre que les groupes de gènes qui se fusionnent tôt ont des 
 
 Nous nous intéressons ici à la méthode des mélanges gaussiens, basée sur l'hypothèse que les données suivent une distribution de probabilité composée de plusieurs distributions gaussiennes.
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, eval=FALSE}
 mg_res <- mclustICL(Data, G=2:20, modelNames = c("EVE", "EEV", "EVV", "VEV", "VVV"))
 ```
 
-```{r}
-fviz_cluster(mg_res, data = Data, ellipse = TRUE, geom = "point", main = "Clustering avec Mélange Gaussien (ICL)")
-#summary(mg_res)
+Tout d'abord, nous allons déterminer le nombre optimal de clusters ainsi que le modèle le plus adapté pour notre jeu de données, en utilisant la méthode mclustICL avec une gamme de clusters de 2 à 20 et différents modèles de mélanges gaussiens (EVE, EEV, EVV, VEV, VVV).
+```{r, fig.height=3, echo=FALSE}
+table_data <- data.frame(
+  "Best ICL values" = c("VEV,4", "VVV,4", "VEV,5"),
+  "ICL" = c(-61554.37, -61722.510, -63474.420),
+  "ICL diff" = c(0.00, -168.143, -1920.053)
+)
+table_data
 ```
 
+```{r}
+mg_res <- Mclust(data = Data, G = 4, modelNames = "VEV")
+```
+
+
+```{r, fig.height=3, echo=FALSE}
+fviz_cluster(mg_res, data = Data, ellipse = TRUE, geom = "point", main = "Clustering avec Mélange Gaussien (ICL)")
+```
+Commentaire sur le chois du modele VEV et sur le clustering.
 
 
 ### Comparaison des différents algorithmes
