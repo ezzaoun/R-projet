@@ -916,7 +916,7 @@ bestmodel = glm(filtered_data$target ~T2_2h + T1_2h +T1_3h + T2_3h , data = filt
 anova(bestmodel,model)
 ```
 
-```{r, echo=F}
+```{r Roc,echo=F,fig.width=7,fig.height=4,fig.align='center',fig.cap="\\label{fig:Roc}courbe Roc",fig.pos='H'}
 l<-1000
 # pour ne pas prendre des données rangées pour le test (qui viennent apres ceux d'apprentissage)
 perm<-sample(nrow(filtered_data))
@@ -929,8 +929,6 @@ modelapp<-glm(target ~. , family = "binomial",data=dapp)
 # Prédictions sur l'échantillon test
 prev<-predict(modelapp,newdata=dtest,type="response")
 
-roc_curve1 <- roc(dtest$target, prev)
-plot(roc_curve1, main = "Courbe ROC", col = "blue", lwd = 2)
 
 # Prédire sur les données de test ou validation
 predictions <- predict(model, newdata = filtered_data, type = "response")
@@ -942,11 +940,10 @@ predicted_class <- ifelse(predictions > 0.5, 1, 0)
 table(predicted_class, filtered_data$target)
 adjustedRandIndex(predicted_class, filtered_data$target)
 
-roc_curve <- roc(filtered_data$target, predictions)
-plot(roc_curve, main = "Courbe ROC", col = "blue", lwd = 2)
-auc_value <- auc(roc_curve)
+roc_curve1 <- roc(dtest$target, prev)
+plot(roc_curve1,col = "blue", lwd = 2)
+auc_value <- auc(roc_curve1)
 print(paste("AUC:", auc_value))
-
 ```
 
 
