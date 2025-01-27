@@ -508,13 +508,22 @@ La première dimension de la figure \ref{fig:mca_ind} est associée aux trois m�
 
 # Etude des différences entre les deux réplicats
 
-## Lois de probabilités
-```{r}
+## Comparaison Statistique des Lois de Probabilité des Deux Réplicats
+
+Dans cette partie, nous allons appliquer le \texttt{test de Kolmogorov-Smirnov (KS)}, un test statistique non paramétrique qui permet de comparer deux distributions de probabilité empiriques ou une distribution empirique avec une distribution théorique. La statistique de test est définie par :
+
+\[
+D_{n,m} = \sup_{t \in \mathbb{R}} |\hat{F}_n(t) - \hat{G}_m(t)|
+\]
+
+où $\hat{F}_n(t)$ et $\hat{G}_m(t)$ représentent les fonctions de répartition empiriques respectives des deux échantillons. Sous l'hypothèse nulle $H_0 : F = G$, où $F$ et $G$ désignent les fonctions de répartition des deux populations, la distribution de $D_{n,m}$ est indépendante de $F$ si $F$ est continue.
+
+```{r, echo=FALSE}
 replicat1 <- as.vector(unlist(Data[, c(1:18)]))
 replicat2 <- as.vector(unlist(Data[, c(19:36)]))
 ```
 
-```{r, echo=FALSE, fig.height=3}
+```{r, echo=FALSE, fig.height=3, fig.pos='H', fig.align='center', fig.cap="\\label{fig:comp_r12}Comparaison des deux réplicats"}
 df_replicats <- data.frame(
   value = c(replicat1, replicat2),
   replicat = factor(rep(c("Réplicat 1", "Réplicat 2"), c(length(replicat1), length(replicat2))))
@@ -528,11 +537,23 @@ ggplot(df_replicats, aes(x = value, fill = replicat, color = replicat)) +
   theme_minimal() +  
   theme(legend.position = "top")  
 ```
+La figure \ref{fig:comp_r12} represente le graphique de densité comparatif qui permet de visualiser les distributions des deux réplicats. Les hypothèses du test sont les suivantes : 
+\begin{itemize}
+    \item $H_0$ : Les deux réplicats  comparés suivent la même loi de probabilité.
+    \item $H_1$ : Les lois de probabilité des deux réplicats  comparés sont différentes.
+\end{itemize}
 
+```{r, fig.pos='H', fig.align='center', echo=FALSE}
+ks_test_result <- ks.test(replicat1, replicat2)
+ks_test_result
+```
+Rejet de H0 : Les lois de probabilité des deux réplicats sont significativement différentes (p-value = p-value = 1.111068e-32)
 
+## Analyse de Significativité des Lois de Probabilité pour chaque Traitement pris séparément
 
+Ici, nous étudions si les sous-groupes de traitements (\texttt{T1, T2, T3}) sont significativement différents. Nous interpréterons la statistique de test obtenue et sa région critique en fonction du niveau de signification choisi.
 
-```{r, echo=FALSE}
+```{r, fig.pos='H', fig.align='center', echo=FALSE}
 T1_R1 <- as.vector(unlist(Data[, c(1,6)]))
 T1_R2 <- as.vector(unlist(Data[, c(19,24)]))
 T2_R1 <- as.vector(unlist(Data[, c(7,12)]))
@@ -540,11 +561,24 @@ T2_R2 <- as.vector(unlist(Data[, c(25,30)]))
 T3_R1 <- as.vector(unlist(Data[, c(13,18)]))
 T3_R2 <- as.vector(unlist(Data[, c(31,36)]))
 
-ks.test(replicat1, replicat2)
 ks.test(T1_R1, T1_R2)
+```
+Rejet de H0 : Les lois de probabilité des deux réplicats pour T1 sont significativement différentes (p-value = 1.143769e-14 ).
+
+```{r, fig.pos='H', fig.align='center', echo=FALSE}
 ks.test(T2_R1, T2_R2)
+```
+Rejet de H0 : Les lois de probabilité des deux réplicats pour T2 sont significativement différentes (p-value = 7.358161e-12 ).
+
+```{r, fig.pos='H', fig.align='center', echo=FALSE}
 ks.test(T3_R1, T3_R2)
 ```
+
+Rejet de H0 : Les lois de probabilité des deux réplicats pour T3 sont significativement différentes (p-value = 7.112548e-17 ).
+
+
+En somme, l'ensemble des tests de Kolmogorov-Smirnov a conduit au rejet systématique de l'hypothèse nulle (\(H_0\)) pour tous les traitements (\(T1, T2, T3\)). Cela signifie que les distributions des deux réplicats (\(R1\) et \(R2\)) sont significativement différentes pour chaque traitement.
+
 
 ## Effet combiné du temps et du traitement 
 
