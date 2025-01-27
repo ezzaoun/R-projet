@@ -384,7 +384,7 @@ Dans cette partie, nous allons mettre en place une classification hiérarchique 
 Pour l'agrégation des clusters, nous optons pour la mesure d'agrégation \texttt{Le lien complet}, donnée par : $D(C_k, C_{k'}) = \frac{|C_k| \, |C_{k'}|}{|C_k| + |C_{k'}|} \, d(m_k, m_{k'})^2 \quad \text{où} \quad m_k \, (\text{resp. } m_{k'}) \text{ est le centre de gravité de } C_k \, (\text{resp. } C_{k'}) \text{ et } d \text{ est une distance euclidienne.}$.
 Pour déterminer le nombre de clusters, nous introduisons le critère \texttt{Calinski-Harabasz} donné par : $\quad \text{PseudoF}(K) = \frac{I_{\text{inter}}(P_K)}{K - 1} \Big/ \frac{I_{\text{intra}}(P_K)}{n - K}$.
 
-La figure \ref{fig:dendo_ind} ci-dessous représente le clustering hiérarchique, permettant de créer un dendrogramme et de déterminer les clusters en coupant l'arbre à un niveau spécifique.
+La figure \ref{fig:deno_ind} ci-dessous représente le clustering hiérarchique, permettant de créer un dendrogramme et de déterminer les clusters en coupant l'arbre à un niveau spécifique.
 
 
 ```{r, fig.pos='H', fig.align='center', fig.cap="\\label{fig:deno_ind}Evolution du critère CH et Dendrogramme avec 2 clusters", fig.height=3, echo=FALSE}
