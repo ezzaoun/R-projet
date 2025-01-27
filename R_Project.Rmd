@@ -1,5 +1,5 @@
 ---
-title: "Projet_commun"
+title: "Projet d’étude"
 author: "Castello Emeline, Seye Papa Samba et Aoun Ezzeddine"
 output: 
   pdf_document:
