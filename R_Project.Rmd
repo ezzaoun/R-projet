@@ -1,14 +1,28 @@
 ---
-title: "Projet d’étude"
+title: "Projet d'étude"
 author: "Castello Emeline, Seye Papa Samba et Aoun Ezzeddine"
-output: 
-  pdf_document:
-    number_sections: true
+institute : "INSA Toulouse"
+date: "`r Sys.Date()`"
+#bibliography: ""
+output:
+  pdf_document :
+    latex_engine: xelatex
+    toc : TRUE
+    keep_tex: true
+    toc_depth : 2
+    number_section : TRUE
+    fig_caption: yes
+    pandoc_args: ["--standalone", "--number-sections"]
+encoding: UTF-8
 header-includes:
-  - \usepackage{float} 
-date: "2024-11-04"
-geometry: margin=1in
-fontsize: 10pt
+   - \usepackage[utf8]{inputenc}
+   - \usepackage{dsfont}
+   - \usepackage{float}
+   - \usepackage{color}
+   - \newcommand{\1}{\mathds{1}}
+editor_options:
+  markdown:
+    wrap: 72
 ---
 
 ```{css,echo=F}
