@@ -31,7 +31,7 @@ knitr::opts_chunk$set(echo=TRUE,
                class.source="badCode")
 ```
 
-```{r,warning=F,message=F,echo=F}
+```{r packages,warning=F,message=F,echo=F}
 library(ggplot2)
 library(gridExtra)
 library(reshape2)
@@ -53,9 +53,9 @@ library(leaps)
 library(float)
 ```
 
-## Partie 1 - Analyse descriptivre du jeu de données
-
+#Analyse descriptivre du jeu de données
 ## Statistique descriptive
+
 Le jeu de données étudié possède 2144 génes et 36 variables qualitatives associées.
 ```{r, eval =F}
 Data = read.table("DataProjet.txt", header =T)
@@ -263,7 +263,7 @@ table(classes_MEL,classes_kmeans)
 
 Les points sont parfaitement classés, comme en témoigne la figure \ref{fig:proba_boxplot}. Toutes les probabilités d'appartenance sont à 1.
 
-```{r lien,echo=F,fig.width=4, fig.height=3,fig.align='center',fig.cap="\\label{fig:lien_mel_kmeans}Lien entre la classification Kmeans et MEL",fig.pos='H'}
+```{r lien,echo=F,fig.width=4, fig.height=3,fig.align='center',fig.cap="\\label{fig:lien_mel_kmeans}Comparaison entre les classifications Kmeans et MEL",fig.pos='H'}
 clust1<-paste("K-k",reskmeans$cluster,sep="")
 clust2<-paste("MEL-k",modICL$classification,sep="")
 
@@ -284,8 +284,8 @@ fviz_pca_ind(respca,col.ind=as.factor(modICL$classification),repel=T,labelsize =
 
 D'après la figure \ref{fig:AcpVar_mel}, on voit que le modèle de mélanges affine davantage la distinction entre les variables en segmentant les classes initiales en sous-classes plus spécifiques. Cette classification permet d'extraire davantage d'informations sur l'expression des gènes en fonction du traitement. Elle révèle que, dans une classe obtenue par k-means, il est possible d'identifier deux ou trois sous-classes présentant une expression similaire.
 
-## Analyse des individus Gènes
-### Partie ACP des individus
+# Analyse des individus Gènes
+## Partie ACP des individus
 
 
 Nous nous intéressons ici aux individus. La figure \ref{fig:acp_ind} représente ces individus en fonction des var dans un espace réduit qui résume le mieux les données.
@@ -301,7 +301,7 @@ grid.arrange(g1, g2, ncol = 2, widths=c(3,1))
 ```
 Ce graphique met en évidence la formation de deux groupes distincts de gènes, répartis de part et d'autre du premier axe principal. Ce premier axe est celui qui sépare le mieux les gènes, indiquant que les deux groupes contiennent des gènes présentant des profils d'expression très différents. Les gènes proches sur le graphique ont des profils d'expression similaires, tandis que ceux éloignés montrent des différences significatives. La coloration des points, basée sur le \texttt{cos2}, reflète la qualité de la projection des gènes : les couleurs chaudes indiquent une meilleure qualité de projection, ce qui signifie que ces gènes contribuent davantage à la variance expliquée dans cet espace réduit. Le cercle de corrélation nous montre que les traitements \( t \in \{\text{T}_2, \text{T}_3\} \), pour le réplicat \( r \in \{\text{R}_1, \text{R}_2\} \), et au temps \( s \in \{3\text{h}, 4\text{h}, 5\text{h}, 6\text{h}\} \) sont fortement corrélés à l'axe 1. On en déduit que cet axe correspond à l'expression des gènes, avec les gènes surexprimés à droite et les gènes sous-exprimés à gauche.
 
-### Clustering K-means 
+## Clustering K-means 
 
 Tout d'abord, nous utiliserons la méthode \texttt{k-means} pour étudier le clustering des individus. Pour cet algorithme, on cherche à minimiser l'\texttt{inertie intraclasse}, qui est définie par : $I_{\text{inter}} = \sum_{k=1}^K |C_k| \times d(m_k, c)^2 \quad \text{où} \quad m_k = \frac{1}{|C_k|} \sum_{i \in C_k} x_i \text{ est le centre de gravité de la classe } C_k$.
 Pour faire cette étude, nous devons avant tout déterminer le nombre de clusters \( K \). Pour cela, nous optons pour le choix du critère \texttt{silhouette} permettant d'évaluer la qualité du clustering en mesurant la cohésion intra-classe et la séparation entre les classes.
@@ -363,7 +363,7 @@ fviz_pca_ind(pca_res_ind, col.ind=as.factor(reskmeans$cluster), geom="point")
 ```
 
 
-### Clustering Hiérarchique (HAC)
+## Clustering Hiérarchique (HAC)
 
 
 Dans cette partie, nous allons mettre en place une classification hiérarchique ascendante. La méthode utilisée pour calculer la distance entre les gènes est la distance \texttt{k-means} définie par : $d(x_i, x_\ell) = \|x_i - x_\ell\|_2 = \sqrt{\sum_{j=1}^p (x_{ij} - x_{\ell j})^2}$.
@@ -399,7 +399,7 @@ Class <- cutree(hclust_res, k = 2)
 fviz_pca_ind(pca_res_ind, geom = c("point"), habillage = as.factor(Class))
 ```
 
-### Mélange gaussien
+## Mélange gaussien
 
 Nous nous intéressons ici à la méthode des mélanges gaussiens, basée sur l'hypothèse que les gènes suivent une distribution de probabilité composée de plusieurs distributions gaussiennes : $f(.|\theta_K) = \sum_{k=1}^K \pi_k f_k(.|\alpha_k)$. Pour sélectionner le bon modèle, nous optons pour le critère de sélection \texttt{ICL}, défini par : $\text{crit}(K) = L(x|\hat{\theta}_K) - \frac{\nu_K}{2} \ln(n) - \text{Ent}(K)$. Comme on sait que l'expression des gènes est dépendante, on peut d'ores et déjà retenir que les modèles permettant des degrés variés de liberté sont les plus adaptés. On en déduit que seuls les modèles suivants sont retenus (\texttt{modelNames}) :
 
@@ -450,7 +450,7 @@ ggplot(Tab, aes(y = value, axis1 = clust1, axis2 = clust2, axis3 = clust3)) +
 La première observation marquante est le flux important partant du cluster 1 des \texttt{k-means} vers le cluster 1 de la classification hiérarchique, et se terminant dans les clusters 1, 2 et 4 du mélange gaussien. Les classes obtenues via la classification hiérarchique sont une agrégation des classes de \texttt{k-means}. On en déduit qu'elles sont concordantes.  
 
 
-#### MCA sur les différentes méthodes :
+### MCA sur les différentes méthodes :
 
 Une autre méthode de comparaison consiste à créer un tableau disjonctif complet qui présente, pour chaque gène, les clusters obtenus selon les trois méthodes de clustering : \texttt{k-means}, classification hiérarchique et mélanges gaussiens.
 
@@ -506,9 +506,9 @@ grid.arrange(g1, g2, ncol=2, widths=c(2,1))
 
 La première dimension de la figure \ref{fig:mca_ind} est associée aux trois méthodes, tandis que la deuxième dimension semble être principalement influencée par \texttt{k-means} et le mélange gaussien. Les proximités observées entre les modalités sur le plan révèlent une forte association entre elles. Par exemple, on constate que le cluster 1 obtenu par \texttt{k-means} et le cluster 1 de la méthode hiérarchique sont très proches, ce qui suggère que plusieurs gènes classés dans le cluster 1 de \texttt{k-means} se retrouvent également dans le cluster 1 de la méthode hiérarchique. Cette observation confirme la comparaison réalisée à l'aide du diagramme d'alluvions.
 
-## Etude des différences entre les deux réplicats
+# Etude des différences entre les deux réplicats
 
-### Lois de probabilités
+## Lois de probabilités
 ```{r}
 replicat1 <- as.vector(unlist(Data[, c(1:18)]))
 replicat2 <- as.vector(unlist(Data[, c(19:36)]))
@@ -546,7 +546,7 @@ ks.test(T2_R1, T2_R2)
 ks.test(T3_R1, T3_R2)
 ```
 
-### Effet combiné du temps et du traitement 
+## Effet combiné du temps et du traitement 
 
 Nous cherchons à étudier l’effet combiné du temps et du traitement sur la différence des deux réplicats. Pour ce faire, nous définissons une nouvelle variable \( Y_{tsg} \) :
 $$
@@ -558,9 +558,13 @@ Pour ce faire, nous utilisons un \textbf{modèle ANCOVA avec interaction}, qui p
 $$
 Y_{tsg} = \beta_0 + \beta_1 \cdot Temps + \beta_2 \cdot Traitement + \beta_3 \cdot (Temps \times Traitement) + \epsilon_{tsg} 
 $$
-- $Temps$: Variable quantitative représentant le temps.
+- Temps : Variable quantitative représentant le temps.
 
-- $Traitement$: Variable catégorielle (0 ou 1) indiquant si le gène a été soumis au traitement.
+- Traitement : est une variable indicatrice (0 ou 1) indiquant si le gène a été soumis au traitement.
+
+- Les coefficients $\beta$ représentent les effets respectifs de l'ordonnée à l'origine, du temps, du traitement et de l'interaction entre le temps et le traitement.
+
+- $\epsilon_{tsg}$ est un terme d'erreur aléatoire.
 
 ```{r modele_ANCOVA,echo=F}
 # Etape 1 : On effectue la différence des réplicats
@@ -589,19 +593,34 @@ rownames(matrix) <- noms_Y
 ```
 
 
-```{r Model, echo=F,include=F}
+```{r Model, echo=F}
 ML <- lm(Y~traitement*temps, data = matrix)
-summary(ML)
+summary(ML)$coefficients
 ```
 
-On établit le modèle sans intéraction
+On observe :
+
+- L'intercept est significatif.
+
+- T2 et T3 seuls ne sont pas significativement différents du traitement de référence.
+
+- Le temps seul n'est pas significatif.
+
+- L'interaction T3:temps est hautement significative, ce qui indique que pour T3, l'effet du temps est très important et influence fortement la réponse.
+
+Pour vérifier l'optimalité de notre modèle, nous établissons le modèle additif sans intéraction.
+$$
+Y_{tsg} = \beta_0 + \beta_1 \cdot Temps + \beta_2 \cdot Traitement + \epsilon_{tsg} 
+$$
 
 ```{r Model_sans_inter, echo=F,include=F}
 ML_no_inter = lm(Y~traitement+temps,data=matrix)
-summary(ML_no_inter)
+summary(ML_no_inter)$coefficients
 ```
 
-```{r courbe_inter,echo=F,fig.width=5, fig.height=4,fig.align='center',fig.cap="\\label{fig:interaction}Interaction plot"}
+Avant de procéder au test de sous-modèle pour déterminer si le modèle avec interaction doit être conservé, nous comparons les valeurs prédites des deux modèles en les visualisant graphiquement.
+
+```{r courbe_inter,echo=F,fig.width=5, fig.height=4,fig.align='center',fig.cap="\\label{fig:interaction}Interaction plot",fig.pos='H'}
 # Modèle sans interaction
 M_non_interaction <- lm(Y ~ traitement + temps, data = matrix)
 
@@ -640,16 +659,15 @@ plot_interaction <- ggplot(new_data, aes(x = temps, y = Y_interaction, color = t
 grid.arrange(plot_non_interaction, plot_interaction, ncol = 2)
 ```
 
-Dans le modèle sans interaction, les courbes sont parallèles, reflétant l'absence d'interdépendance entre le traitement et le temps. En revanche, dans le modèle avec interaction, les courbes montrent des variations de pente ou des croisements, indiquant une présence probable d'interaction entre ces deux variables. À partir de ces deux représentations, un test de sous-modèle est effectué pour déterminer si l'interaction doit être conservée dans le modèle final.
+D'après la figure \ref{fig:interaction}, on observe que dans le modèle sans interaction, les courbes sont parallèles, reflétant l'absence d'interdépendance entre le traitement et le temps. En revanche, dans le modèle avec interaction, les courbes montrent des variations de pente ou des croisements, indiquant une présence probable d'interaction entre ces deux variables. À partir de ces deux représentations, un test de sous-modèle est effectué pour déterminer si l'interaction doit être conservée dans le modèle final.
 
 ```{r Compare_modeles, echo=F}
 anova(ML_no_inter,ML)
 ```
 La p-valeur obtenue est de $1.426e-15<0.05$. Cela conduit à rejeter largement l'hypothèse nulle et à privilégier le modèle avec interaction.
 
-## Pédiction de l’expression des gènes à 6h
-
-### A partir de l'expressions des gènes à 1h
+# Etude de la dynamique de l’expression des gènes 
+## Pédiction de l’expression des gènes à 6h à partir de l'expression à 1h
 
 Nous avons calculé la moyenne des réplicats pour chaque gène et chaque temps, notée $Y_{tsgMoy}$. Un modèle ANCOVA avec interaction a été ajusté pour prédire l'expression finale (à t=6h) en fonction de l'expression initiale (à t=1h) et du traitement :
 $$
@@ -695,12 +713,14 @@ matrixMoy$Y_moy_1h <- as.numeric(matrixMoy$Y_moy_1h)
 matrixMoy$Y_moy_6h <- as.numeric(matrixMoy$Y_moy_6h)
 ```
 
-```{r Model_6h_1h,echo=F,include=F}
+```{r Model_6h_1h,echo=F}
 M_1h_to_6h <- lm(Y_moy_6h~Y_moy_1h*traitement, data = matrixMoy)
 summary(M_1h_to_6h)
 ```
 
-```{r observed_fitted_plot, echo=F,fig.width=7, fig.height=4,fig.align='center',fig.cap="\\label{fig:obsVSpred1}Repésentation de la qualité du modèle"}
+Nous traçons deux graphes qui nous aideront à déterminer la qualité de l'ajustement du modèle :
+
+```{r observed_fitted_plot, echo=F,fig.width=7, fig.height=4,fig.align='center',fig.cap="\\label{fig:obsVSpred1}Repésentation de la qualité du modèle",fig.pos='H'}
 # Prédictions à partir du modèle
 matrixMoy$Predicted <- predict(M_1h_to_6h, newdata = matrixMoy)
 
@@ -732,19 +752,21 @@ g2 = ggplot(data = data.frame(Fitted = fitted_vals, Residuals = residuals), aes(
 grid.arrange(g1,g2,ncol=2)
 ```
 
-On observe que les valeurs prédites sont principalement proches de 0, tandis que les valeurs observées, en particulier pour les traitements T2 et T3, diffèrent significativement de 0. Cela suggère que l'expression des gènes à 1h ne constitue pas un bon indicateur pour prédire celle à 6h.
-En effet, 1 heure représente un stade relativement précoce, et les gènes n'ont probablement pas eu suffisamment de temps pour réagir aux traitements. Par conséquent, il est difficile de faire des prédictions fiables sur l'expression génique à 6 heures en se basant sur des données obtenues à 1 heure.
+D'après la figure \ref{fig:obsVSpred1}, on observe :
 
-Le graphique des résidus vs valeurs ajustées indique que notre modèle actuel présente des problèmes. La dispersion non uniforme des résidus suggère une hétéroscédasticité: la variabilité des erreurs n'est pas constante. De plus, la légère tendance non-linéaire des résidus indique que la relation entre les variables pourrait être plus complexe que ce que notre modèle linéaire simple ne capture.
-En d'autres termes, le modèle que nous utilisons actuellement ne semble pas être le plus adapté à nos données. Des ajustements sont nécessaires pour obtenir des résultats plus fiables.
+- les valeurs prédites sont principalement proches de 0, tandis que les valeurs observées, en particulier pour les traitements T2 et T3, diffèrent significativement de 0. Cela suggère que l'expression des gènes à 1h ne constitue pas un bon indicateur pour prédire celle à 6h.
+En effet, 1 heure représente un stade relativement précoce, et les gènes n'ont probablement pas eu suffisamment de temps pour réagir aux traitements.
+
+- le graphique des résidus en fonction des valeurs ajustées, on constate que La dispersion non uniforme des résidus suggère une hétéroscédasticité: la variabilité des erreurs n'est pas constante. De plus, la légère tendance non-linéaire des résidus indique que la relation entre les variables pourrait être plus complexe que ce que notre modèle linéaire simple ne capture.
+En d'autres termes, le modèle que nous utilisons actuellement ne semble pas être le plus adapté à nos données.
 
 **Conclusion**:
-Le modèle ajusté montre une qualité d'ajustement modérée, avec un R² de 27.06%. Les termes d’interaction entre $Y_{1h}$ et le traitement sont hautement significatifs (p<2e−16), ce qui montre que l’effet de $Y_{1h}$ sur $Y_{6h}$ varie selon le traitement. 
+Le modèle ajusté montre une qualité d'ajustement modérée, avec un R² de 27.06%. Les termes d’interaction entre $Y_{1h}$ et le traitement sont significatifs (p<2e−16), ce qui montre que l’effet de $Y_{1h}$ sur $Y_{6h}$ varie selon le traitement. 
 En se basant sur les graphiques obtenus, le modèle que nous utilisons actuellement ne semble pas être le plus adapté à nos données. Des ajustements sont nécessaires pour obtenir des résultats plus fiables.
 
-### A partir de l'expressions des gènes à 3h
+## A partir de l'expressions des gènes à 3h
 
-Nous souhaitons prédire $Y_{6h}$ en utilisant $Y_{3h}$ comme variable explicative principale. Pour ce faire, nous allons reprendre le modèle précédent et l'adapter en remplaçant toutes les variables correspondant aux données au temps $1h$ par leurs équivalents au temps $3h$. 
+Nous souhaitons prédire $Y_{6hMoy}$ en utilisant $Y_{3hMoy}$. Pour ce faire, nous allons reprendre le modèle précédent et l'adapter en remplaçant toutes les variables correspondant aux données au temps $1h$ par leurs équivalents au temps $3h$. 
 ```{r Ancova_6h_3h,echo=F}
 p = ncol(Data)
 
@@ -765,19 +787,16 @@ matrixMoy2$Y_moy_3h <- as.numeric(matrixMoy2$Y_moy_3h)
 ```
 
 
-```{r Model_6h_3h, echo=F,include=F}
+```{r Model_6h_3h, echo=F}
 M_3h_to_6h <- lm(Y_moy_6h~Y_moy_3h*traitement, data = matrixMoy2)
 summary(M_3h_to_6h)
 ```
-- Residual Standard Error (RSE) : 1.168
-- R² ajusté : 0.770
-- La variance expliquée est beaucoup plus élevée, indiquant que les prédictions du modèle pour les données à 3h sont nettement meilleures.
 
-Le modèle basé sur les données de 3h semble être plus performant que celui de 1h, avec un R² ajusté presque trois fois supérieur et un RSE significativement plus faible. Cela signifie que les valeurs à 3h prédisent mieux les valeurs à 6h.
+Le modèle basé sur les données de 3h semble être plus performant que celui de 1h, avec un R² ajusté presque trois fois supérieur et un RSE significativement plus faible. Cela pourrait signifier que les valeurs à 3h prédisent mieux les valeurs à 6h.
 
 On trace la courbe des valeurs observées par rapport aux valeurs prédites, ainsi que les résidus par rapport aux valeurs prédites.
 
-```{r observed_fitted,echo=F,fig.width=7,fig.height=4,fig.align='center',fig.cap="\\label{fig:obsVSpred2}Repésentation de la qualité du modèle"}
+```{r observed_fitted,echo=F,fig.width=7,fig.height=4,fig.align='center',fig.cap="\\label{fig:obsVSpred2}Repésentation de la qualité du modèle",fig.pos='H'}
 # Prédictions à partir du modèle
 matrixMoy2$Predicted <- predict(M_3h_to_6h, newdata = matrixMoy2)
 
@@ -810,11 +829,10 @@ g2 = ggplot(data = data.frame(Fitted = new_fitted_vals, Residuals = new_residual
 grid.arrange(g1,g2,ncol=2)
 ```
 
-On observe que les valeurs prédites s'alignent bien avec les valeurs observées, et que les résidus sont plus uniformément dispersés autour de 0. Cela indique une amélioration notable de la qualité des prédictions par rapport au modèle précédent.
+A partir de la figure \ref{fig:obsVSpred2} on observe que les valeurs prédites s'alignent bien avec les valeurs observées, et que les résidus sont plus uniformément dispersés autour de 0. Cela indique une amélioration notable de la qualité des prédictions par rapport au modèle précédent.
 
-
-
-## Etude de l’expression des gènes pour le traitement T3 à 6h :
+# Etude de l’expression des gènes pour le traitement T3 à 6h :
+## Les variables prédictives pour le traitement T3 à 6h parmi les différents temps observés pour les traitements T1 et T2
 
 ```{r MLG, echo=F,include=F}
 # Matrice moyenne des replicats
@@ -875,12 +893,7 @@ ggplot(tmp, aes(x = Predicted, y = T3_6h)) +
   ) +
   theme_minimal()
 ```
-
-
-Consigne : Peut-on prédire les gènes sur-exprimés (codés 1) et les gènes sous-exprimés (codés 0) à 6h pour le
-traitement T3 à partir des observations pour les traitements T1 et T2 et les heures 1 à 3 pour ces
-mêmes gènes ?
-
+## Prédiction des gènes sur-exprimés et sous-exprimés à partir des observations pour les traitements T1 et T2 et les heures 1 à 3
 
 ```{r, echo=F,include=F}
 # Filtrer les données en excluant les valeurs intermédiaires (-1 <= T3_6h <= 1)
@@ -946,12 +959,13 @@ modelbestinter = step(model_inter,trace=F)
 modelbestinter
 ```
 
+# Test d'indépendance
+## Pour tous les traitements
+Nous souhaitons déterminer si le caractère des gènes à 6h est influencé par le traitement. Pour ce faire, nous effectuerons un test non paramétrique d'indépendance de Khi-deux.
+$H_{0}$: "le caractère est indépendant du traitement" contre $H_{1}$: "il existe une relation entre ces deux variables".
+Pour mener ce test, nous construirons un tableau de contingence.
 
-Consigne : Le caractère sur exprimé/sous exprimé/non exprimé des gènes à 6h dépend-il du traitement ? Même
-question si on se limite aux traitements T2 et T3.
-
-pour chaque traitement, on prend les reponses des genes à 6h et on cree un data frame 
-```{r, echo=F}
+```{r Independance, echo=F}
 moy_rep_6h = Moy_Rep[c(6,12,18)]
 #knitr::kable(moy_rep_6h)
 
@@ -967,40 +981,36 @@ categories <- data.frame(
 #knitr::kable(categories)
 # Tableau de contingence
 table_contingence <- table(stack(categories))
-print(table_contingence)
+knitr::kable(table_contingence)
+```
 
+En effectuant le test, on obtient les resultats suivants :
+
+```{r test,echo=F}
 # Test du Chi-2
 chisq_test <- chisq.test(table_contingence)
 print(chisq_test)
 ```
 
+Compte tenu d'une p-valeur inférieure à 2.2e-16, nous rejetons l'hypothèse nulle selon laquelle le traitement n'influence pas l'expression génique à 6h. Cette conclusion est cohérente avec l'observation d'une interaction significative entre le traitement et le niveau d'expression initial. En effet, nous avons constaté que certains gènes sur-exprimés sous les traitements T2 et T3 ne le sont pas sous le traitement T1, et vice versa.
 
-```{r, echo=F}
+## Pour les traitements T2 et T3
+On se limite aux 2 traitements T2 et T3 et on refait le même test du Khi-deux. On obtient la table de contingence ainsi que le test suivants:
+
+```{r ind_T2_T3, echo=F}
 # Filtrer pour T2 et T3
 categories_T2_T3 <- categories[, c("T2", "T3")]
 
 # Tableau de contingence pour T2 et T3
 table_T2_T3 <- table(stack(categories_T2_T3))
+knitr::kable(table_T2_T3)
 
 # Test du Chi-2 pour T2 et T3
 chisq_test_T2_T3 <- chisq.test(table_T2_T3)
 print(chisq_test_T2_T3)
-
 ```
 
+La p-valeur obtenue est de 0.7858, ce qui est bien supérieur au seuil de significativité de 0.05. Par conséquent, nous ne pouvons pas rejeter l'hypothèse nulle $H_{0}$.
+L'hypothèse d'indépendance entre les traitements T2 et T3 et l'expression des gènes est donc confirmée. Cela signifie qu'il n'y a pas de différence significative dans l'expression des gènes à 6 heures en fonction du traitement (T2 ou T3).
 
-```{r, echo=F}
-library(ggplot2)
-
-# Préparer les données pour ggplot
-plot_data <- as.data.frame(table_contingence)
-colnames(plot_data) <- c("Category", "Treatment", "Count")
-
-# Visualisation
-ggplot(plot_data, aes(x = Treatment, y = Count, fill = Category)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  labs(title = "Distribution des gènes par catégorie et traitement",
-       x = "Traitement",
-       y = "Nombre de gènes") +
-  theme_minimal()
-```
+En conclusion, les traitements T2 et T3 n'ont pas d'effet distinct sur l'expression des gènes dans le contexte étudié.
