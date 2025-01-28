@@ -298,8 +298,8 @@ fviz_pca_ind(respca,col.ind=as.factor(modICL$classification),repel=T,labelsize =
 
 D'après la figure \ref{fig:AcpVar_mel}, on voit que le modèle de mélanges affine davantage la distinction entre les variables en segmentant les classes initiales en sous-classes plus spécifiques. Cette classification permet d'extraire davantage d'informations sur l'expression des gènes en fonction du traitement. Elle révèle que, dans une classe obtenue par k-means, il est possible d'identifier deux ou trois sous-classes présentant une expression similaire.
 
-# Analyse des individus Gènes
-## Partie ACP des individus
+## Analyse des individus Gènes
+### Partie ACP des individus
 
 
 Nous nous intéressons ici aux individus. La figure \ref{fig:acp_ind} représente ces individus en fonction des var dans un espace réduit qui résume le mieux les données.
@@ -315,7 +315,7 @@ grid.arrange(g1, g2, ncol = 2, widths=c(3,1))
 ```
 Ce graphique met en évidence la formation de deux groupes distincts de gènes, répartis de part et d'autre du premier axe principal. Ce premier axe est celui qui sépare le mieux les gènes, indiquant que les deux groupes contiennent des gènes présentant des profils d'expression très différents. Les gènes proches sur le graphique ont des profils d'expression similaires, tandis que ceux éloignés montrent des différences significatives. La coloration des points, basée sur le \texttt{cos2}, reflète la qualité de la projection des gènes : les couleurs chaudes indiquent une meilleure qualité de projection, ce qui signifie que ces gènes contribuent davantage à la variance expliquée dans cet espace réduit. Le cercle de corrélation nous montre que les traitements \( t \in \{\text{T}_2, \text{T}_3\} \), pour le réplicat \( r \in \{\text{R}_1, \text{R}_2\} \), et au temps \( s \in \{3\text{h}, 4\text{h}, 5\text{h}, 6\text{h}\} \) sont fortement corrélés à l'axe 1. On en déduit que cet axe correspond à l'expression des gènes, avec les gènes surexprimés à droite et les gènes sous-exprimés à gauche.
 
-## Clustering K-means 
+### Clustering K-means 
 
 Tout d'abord, nous utiliserons la méthode \texttt{k-means} pour étudier le clustering des individus. Pour cet algorithme, on cherche à minimiser l'\texttt{inertie intraclasse}, qui est définie par : $I_{\text{inter}} = \sum_{k=1}^K |C_k| \times d(m_k, c)^2 \quad \text{où} \quad m_k = \frac{1}{|C_k|} \sum_{i \in C_k} x_i \text{ est le centre de gravité de la classe } C_k$.
 Pour faire cette étude, nous devons avant tout déterminer le nombre de clusters \( K \). Pour cela, nous optons pour le choix du critère \texttt{silhouette} permettant d'évaluer la qualité du clustering en mesurant la cohésion intra-classe et la séparation entre les classes.
@@ -377,7 +377,7 @@ fviz_pca_ind(pca_res_ind, col.ind=as.factor(reskmeans$cluster), geom="point")
 ```
 
 
-## Clustering Hiérarchique (HAC)
+### Clustering Hiérarchique (HAC)
 
 
 Dans cette partie, nous allons mettre en place une classification hiérarchique ascendante. La méthode utilisée pour calculer la distance entre les gènes est la distance \texttt{k-means} définie par : $d(x_i, x_\ell) = \|x_i - x_\ell\|_2 = \sqrt{\sum_{j=1}^p (x_{ij} - x_{\ell j})^2}$.
@@ -413,7 +413,7 @@ Class <- cutree(hclust_res, k = 2)
 fviz_pca_ind(pca_res_ind, geom = c("point"), habillage = as.factor(Class))
 ```
 
-## Mélange gaussien
+### Mélange gaussien
 
 Nous nous intéressons ici à la méthode des mélanges gaussiens, basée sur l'hypothèse que les gènes suivent une distribution de probabilité composée de plusieurs distributions gaussiennes : $f(.|\theta_K) = \sum_{k=1}^K \pi_k f_k(.|\alpha_k)$. Pour sélectionner le bon modèle, nous optons pour le critère de sélection \texttt{ICL}, défini par : $\text{crit}(K) = L(x|\hat{\theta}_K) - \frac{\nu_K}{2} \ln(n) - \text{Ent}(K)$. Comme on sait que l'expression des gènes est dépendante, on peut d'ores et déjà retenir que les modèles permettant des degrés variés de liberté sont les plus adaptés. On en déduit que seuls les modèles suivants sont retenus (\texttt{modelNames}) :
 
@@ -435,10 +435,10 @@ mg_res <- Mclust(Data, G=4, modelNames = "VEV")
 ```
 
 
-Le modèle maximisant le critère \texttt{ICL} est "VEV", avec un nombre de clusters égal à 4. La figure \ref{fig:mmacp} suivante représente les clusters obtenus des individus.
+Le modèle maximisant le critère \texttt{ICL} est "VEV", avec un nombre de clusters égal à 4. La figure \ref{fig:mmacp_ind} suivante représente les clusters obtenus des individus.
 
 
-```{r, fig.pos='H', fig.align='center', fig.height=3, echo=FALSE, fig.cap="\\label{fig:mmacp}Clusters représentés avec un Mélange Gaussien"}
+```{r, fig.pos='H', fig.align='center', fig.height=3, echo=FALSE, fig.cap="\\label{fig:mmacp_ind}Clusters représentés avec un Mélange Gaussien"}
 fviz_cluster(mg_res, data = Data, ellipse = TRUE, geom = "point", main = "Clustering avec Mélange Gaussien (ICL)")
 ```
 
@@ -446,9 +446,9 @@ fviz_cluster(mg_res, data = Data, ellipse = TRUE, geom = "point", main = "Cluste
 
 #### Diagramme d'alluvion :
 
-Nous allons ici comparer les trois méthodes de clustering réalisées précédemment en utilisant un diagramme d'alluvions (figure \ref{fig:alluvion}).
+Nous allons ici comparer les trois méthodes de clustering réalisées précédemment en utilisant un diagramme d'alluvions (figure \ref{fig:alluvion_ind}).
 
-```{r, fig.pos='H', fig.align='center', fig.height=3, fig.cap="\\label{fig:mmacp}Diagramme d'alluvions", echo=FALSE}
+```{r, fig.pos='H', fig.align='center', fig.height=3, fig.cap="\\label{fig:alluvion_ind}Diagramme d'alluvions", echo=FALSE}
 clust1 <- paste("K-k", reskmeans$cluster, sep = "")
 clust2 <- paste("CH-k", cutree(hclust_res, k = 2), sep = "")
 clust3 <- paste("MG-k", mg_res$classification, sep = "")
@@ -464,7 +464,7 @@ ggplot(Tab, aes(y = value, axis1 = clust1, axis2 = clust2, axis3 = clust3)) +
 La première observation marquante est le flux important partant du cluster 1 des \texttt{k-means} vers le cluster 1 de la classification hiérarchique, et se terminant dans les clusters 1, 2 et 4 du mélange gaussien. Les classes obtenues via la classification hiérarchique sont une agrégation des classes de \texttt{k-means}. On en déduit qu'elles sont concordantes.  
 
 
-### MCA sur les différentes méthodes :
+#### MCA sur les différentes méthodes :
 
 Une autre méthode de comparaison consiste à créer un tableau disjonctif complet qui présente, pour chaque gène, les clusters obtenus selon les trois méthodes de clustering : \texttt{k-means}, classification hiérarchique et mélanges gaussiens.
 
@@ -490,7 +490,7 @@ kable(table_mg_df, col.names = c("Cluster", "Nombre d'éléments"), caption = "T
 ```
 
 
-```{r, fig.pos='H', fig.align='center', echo=FALSE, fig.height=3, fig.cap="\\label{fig:mca_ind}Représentation des modalités sur les axes principaux de la MCA",}
+```{r, fig.pos='H', fig.align='center', echo=FALSE, fig.height=3, fig.cap="\\label{fig:mca_ind}Représentation des modalités sur les axes principaux de la MCA"}
 Kmeans = as.factor(reskmeans$cluster) 
 Melange = as.factor(mg_res$classification)  
 CAH = as.factor(cutree(hclust_res, k = 2)) 
