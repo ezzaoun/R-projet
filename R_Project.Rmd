@@ -67,7 +67,7 @@ library(leaps)
 library(float)
 ```
 
-#Analyse descriptivre du jeu de données
+# Analyse descriptivre du jeu de données
 ## Statistique descriptive
 
 Le jeu de données étudié possède 2144 génes et 36 variables qualitatives associées.
