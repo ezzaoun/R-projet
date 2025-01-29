@@ -962,7 +962,9 @@ A partir de la figure \ref{fig:obsVSpred2} on observe que les valeurs prédites 
 # Etude de l’expression des gènes pour le traitement T3 à 6h :
 ## Les variables prédictives pour le traitement T3 à 6h parmi les différents temps observés pour les traitements T1 et T2
 
-```{r MLG, echo=F,include=F}
+On va réaliser une regression linéaire pour prédire les gènes du traitement 3 à 6h en fonction des gènes des autres traitements à toutes les heures.  
+
+```{r MLG, eval = T, echo=T, fig.cap="Modèle de regression linéaire complet"}
 # Matrice moyenne des replicats
 p = ncol(Data)
 Moy_Rep = (Data[,1:(p/2)] + Data[,((p/2) + 1):p])/2
@@ -974,41 +976,29 @@ modele_T3_all <- lm(T3_6h ~ T1_1h + T1_2h + T1_3h + T1_4h + T1_5h + T1_6h +
 summary(modele_T3_all)
 ```
 
+On remarque dans cette sortie, que la p-valeur pour le modèle constant est < 2.2e-16; on rejette le modèle constant. On se demande maintenant quelle est la meilleur modèlisation de ce modèle. Pour selectionner le modèle parcimonieux, on décide d'utiliser le critère de Mallows avec un méthode backward. On cherche à minimiser ce critère.
 
-```{r Selection, echo=F}
+```{r Selection, fig.width=5, fig.height=4, echo=F, fig.show='hold', fig.align = "center", fig.cap = "\\label{fig:critereMallows}Critère de Mallows"}
 choix = regsubsets(T3_6h~T1_1h + T1_2h + T1_3h + T1_4h + T1_5h + T1_6h +
                       T2_1h + T2_2h + T2_3h + T2_4h + T2_5h + T2_6h,data=Moy_Rep,nbest=1,nvmax=11,method="backward")
 plot(choix,scale="Cp")
+```
 
+Sur la Figure \ref{fig:critereMallows}, on remarque le critère $c_p$ selectionne toutes les variables sauf T1_5h et T2_1h. On décide de tester ce sous-modèle en le comparant au modèle de regression linéaire complété implémenté précédemment. 
+
+```{r Selection2, echo=F, fig.show='hold', fig.align = "center", fig.cap = " "}
 new_modele_T3_all <- lm(T3_6h ~ T1_1h + T1_2h + T1_3h + T1_4h + T1_6h +
                       T2_2h + T2_3h + T2_4h + T2_5h + T2_6h, 
                     data = Moy_Rep)
 anova(new_modele_T3_all,modele_T3_all)
 ```
 
+Pour l'analyse de variable entre les 2 modèles, on obtient une p-valeur = 0.8284 > 0.05, on accepte donc largement le nouveau modèle. 
 
-```{r coeff,fig.width=5,fig.height=3,echo=F}
-# Extraire les coefficients significatifs
-coef_model <- summary(modele_T3_all)$coefficients
-coef_df <- data.frame(
-  Variable = rownames(coef_model),
-  Coefficient = coef_model[, "Estimate"],
-  P_value = coef_model[, "Pr(>|t|)"]
-)
-
-# Filtrer les variables significatives (p-value < 0.05)
-coef_df <- coef_df[coef_df$P_value < 0.05, ]
-
-# Créer un barplot des coefficients
-ggplot(coef_df, aes(x = reorder(Variable, Coefficient), y = Coefficient)) +
-  geom_bar(stat = "identity", fill = "steelblue") +
-  coord_flip() +
-  theme_minimal() +
-  labs(title = "Coefficients significatifs du modèle", x = "Variable", y = "Coefficient")
-```
+On souhaîte maintenant vérifier si notre nouveau modèle permet de bien exprimer les valeurs observées (gènes).
 
 
-```{r predict,fig.width=7,fig.height=4,echo=F}
+```{r predict, echo = F, fig.width=3,fig.height=2, fig.cap="\\label{fig:comp_vop}Comparaison valeurs observées et prédites"}
 tmp = Moy_Rep
 tmp$Predicted <- predict(new_modele_T3_all, newdata = tmp)
 ggplot(tmp, aes(x = Predicted, y = T3_6h)) +
@@ -1021,9 +1011,18 @@ ggplot(tmp, aes(x = Predicted, y = T3_6h)) +
   ) +
   theme_minimal()
 ```
-## Prédiction des gènes sur-exprimés et sous-exprimés à partir des observations pour les traitements T1 et T2 et les heures 1 à 3
 
-```{r, echo=F,include=F}
+
+Sur la figure \ref{fig:comp_vop}, on compare une fonction affine de pente 1 et d'origine nulle aux valeurs observées en fonction des valeurs prédites. Cela permet de vérifier si on a bien prédit les valeurs; plus les points sont alignés à la droit, mieux est notre prédictions. On remarque ici que les points sont proches de cette droite, on peut donc en conclure que notre modèle à bien prédit les valeurs. 
+
+## Prédiction des gènes sur-exprimés et des gènes sous-exprimés à 6h pour le traitement 3 à partir des traitements T1 et T2 et les heures 1 à 3 pour ces mêmes gènes
+
+Nous avons tenter d'exprimer les gènes sur-exprimés (codés 1) et les gènes sous-exprimés (codés 0) à 6h pour le traitement T3 à partir des observations pour les traitements T1 et T2 et les heures 1 à 3 pour ces mêmes gènes. Pour cela, on va réaliser un modèle linéaire généralisé car les variables que l'on souhaîte prédire sont de type binaire; on choisit ainsi une fonction de lien logit pour effectuer une regression logistique. 
+
+Dans un premier temps, on prédit les gènes sur-exprimés et sous-esprimés et on affiche le nombre de gène identifié comme sous-exprimée(codés 0) et sur-exprmiée (codés 1) : 
+
+
+```{r, echo=F}
 # Filtrer les données en excluant les valeurs intermédiaires (-1 <= T3_6h <= 1)
 x = Moy_Rep[Moy_Rep$T3_6h < 1 & Moy_Rep$T3_6h > -1, ]
 # 8 genes non classés
@@ -1033,18 +1032,32 @@ filtered_data$target <- as.factor(ifelse(filtered_data$T3_6h > 1, 1, 0))
 filtered_data <- filtered_data[, c("T1_1h", "T1_2h", "T1_3h", "T2_1h", "T2_2h", "T2_3h","target")]
 
 table(filtered_data$target)
+```
 
+On essayer ensuite de générer ce résultat à partir du modèle complet de régression logistique.
+
+```{r, echo=F}
 model <- glm(filtered_data$target ~. , data = filtered_data, family = "binomial")
 
 summary(model)
+```
 
+On essaie ensuite de réduire les paramètres du modèle grace au critère AIC que l'on souhaîte minimiser. Pour cela, on utilise la commande suivant :
+
+```{r, echo=T, eval = F}
 step.backward = step(model, direction="backward",k=log(nrow(filtered_data)))
+```
 
+Les resultats nous donne un AIC de 422.59 pour un modèle prédit en fonction de T2_2h, T1_2h, T1_3h et T2_3h. On génère ensuite et compare ce nouveau modèle au modèle complet.
+
+```{r, echo=F}
 bestmodel = glm(filtered_data$target ~T2_2h + T1_2h +T1_3h + T2_3h , data = filtered_data, family = "binomial")
 anova(bestmodel,model)
 ```
 
-```{r Roc,echo=F,fig.width=7,fig.height=4,fig.align='center',fig.cap="\\label{fig:Roc}courbe Roc",fig.pos='H'}
+On obtient ici une p-valeur = 0.785 > 0.05, on accepte donc le modèle. 
+
+```{r Roc,echo=F, eval=F,fig.width=7,fig.height=4,fig.align='center',fig.cap="\\label{fig:Roc}courbe Roc"}
 l<-1000
 # pour ne pas prendre des données rangées pour le test (qui viennent apres ceux d'apprentissage)
 perm<-sample(nrow(filtered_data))
@@ -1063,7 +1076,9 @@ predictions <- predict(model, newdata = filtered_data, type = "response")
 
 # Convertir les prédictions en classes (0 ou 1) en fonction d'un seuil de 0.5
 predicted_class <- ifelse(predictions > 0.5, 1, 0)
+```
 
+```{r Roc2,echo=F,eval=F,fig.width=7,fig.height=4,fig.align='center',fig.cap="\\label{fig:Roc2}courbe Roc"}
 # Matrice de confusion
 table(predicted_class, filtered_data$target)
 adjustedRandIndex(predicted_class, filtered_data$target)
@@ -1076,7 +1091,7 @@ print(paste("AUC:", auc_value))
 
 
 
-```{r, echo=F}
+```{r, echo=F, eval=FALSE}
 model_inter <- glm(filtered_data$target ~(.)^2 , data = filtered_data, family = "binomial")
 summary(model_inter)
 
