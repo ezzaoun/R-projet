@@ -194,7 +194,7 @@ D'après la figure \ref{fig:AcpVar}, on observe :
 
 - La dimension 2 semble être liée à la temporalité, avec une décroissance des heures du haut vers le bas.
 
-## Clustering :
+## Clustering 
 
 ### Choix du nombre de classes 
 
