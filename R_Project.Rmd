@@ -66,76 +66,7 @@ library(tidyverse)
 library(leaps)
 library(float)
 ```
----
-title: "Projet d'étude"
-author: "Castello Emeline, Seye Papa Samba et Aoun Ezzeddine"
-institute : "INSA Toulouse"
-date: "`r Sys.Date()`"
-#bibliography: ""
-output:
-  pdf_document :
-    latex_engine: xelatex
-    toc : TRUE
-    keep_tex: true
-    toc_depth : 2
-    number_section : TRUE
-    fig_caption: yes
-    pandoc_args: ["--standalone", "--number-sections"]
-encoding: UTF-8
-header-includes:
-   - \usepackage[utf8]{inputenc}
-   - \usepackage{dsfont}
-   - \usepackage{float}
-   - \usepackage{color}
-   - \newcommand{\1}{\mathds{1}}
-editor_options:
-  markdown:
-    wrap: 72
-geometry: margin=1in
-fontsize: 10pt
----
 
-```{css,echo=F}
-.badCode {
-background-color: #cfdefc; 
-}
-
-.corrO { background-color: rgb(255,238,237); }
-.corrS { background-color: pink; color: black; border: 1px solid red; }
-```
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo=TRUE,
-               cache=FALSE,
-               prompt=FALSE,
-               tidy=TRUE,
-               comment=NA,
-               message=FALSE,
-               warning=FALSE,
-               class.source="badCode")
-```
-
-```{r packages,warning=F,message=F,echo=F}
-library(ggplot2)
-library(gridExtra)
-library(reshape2)
-library(FactoMineR)
-library(factoextra)
-library(corrplot)
-library(forcats)
-library(mclust)
-library(cluster)
-library(ppclust)
-library(ggalluvial)
-library(klaR)
-library(gridExtra)
-library(reshape2)
-library(clusterSim)
-library(pROC)
-library(tidyverse)
-library(leaps)
-library(float)
-```
 # Introduction
 
 Ce projet vise à analyser les données d’expression de 2144 gènes d’une plante modèle, mesurées sous trois traitements ($T1$, $T2$, $T3$), six temps ($1h$ à $6h$), et deux réplicats biologiques ($R1$ et $R2$).
