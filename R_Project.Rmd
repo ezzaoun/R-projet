@@ -66,71 +66,127 @@ library(tidyverse)
 library(leaps)
 library(float)
 ```
+---
+title: "Projet d'étude"
+author: "Castello Emeline, Seye Papa Samba et Aoun Ezzeddine"
+institute : "INSA Toulouse"
+date: "`r Sys.Date()`"
+#bibliography: ""
+output:
+  pdf_document :
+    latex_engine: xelatex
+    toc : TRUE
+    keep_tex: true
+    toc_depth : 2
+    number_section : TRUE
+    fig_caption: yes
+    pandoc_args: ["--standalone", "--number-sections"]
+encoding: UTF-8
+header-includes:
+   - \usepackage[utf8]{inputenc}
+   - \usepackage{dsfont}
+   - \usepackage{float}
+   - \usepackage{color}
+   - \newcommand{\1}{\mathds{1}}
+editor_options:
+  markdown:
+    wrap: 72
+geometry: margin=1in
+fontsize: 10pt
+---
 
-# Analyse descriptivre du jeu de données
-## Statistique descriptive
+```{css,echo=F}
+.badCode {
+background-color: #cfdefc; 
+}
 
-Le jeu de données étudié possède 2144 génes et 36 variables qualitatives associées.
-```{r, eval =F}
+.corrO { background-color: rgb(255,238,237); }
+.corrS { background-color: pink; color: black; border: 1px solid red; }
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=TRUE,
+               cache=FALSE,
+               prompt=FALSE,
+               tidy=TRUE,
+               comment=NA,
+               message=FALSE,
+               warning=FALSE,
+               class.source="badCode")
+```
+
+```{r packages,warning=F,message=F,echo=F}
+library(ggplot2)
+library(gridExtra)
+library(reshape2)
+library(FactoMineR)
+library(factoextra)
+library(corrplot)
+library(forcats)
+library(mclust)
+library(cluster)
+library(ppclust)
+library(ggalluvial)
+library(klaR)
+library(gridExtra)
+library(reshape2)
+library(clusterSim)
+library(pROC)
+library(tidyverse)
+library(leaps)
+library(float)
+```
+# Introduction
+
+Ce projet vise à analyser les données d’expression de 2144 gènes d’une plante modèle, mesurées sous trois traitements ($T1$, $T2$, $T3$), six temps ($1h$ à $6h$), et deux réplicats biologiques ($R1$ et $R2$).
+
+L’objectif est de répondre à plusieurs problématiques clés : explorer la structure des données, étudier les effets des traitements et du temps, prédire l’expression des gènes à différents temps, et identifier les facteurs influençant l’expression. Ces analyses reposent sur des méthodes d'exploration de données, de clustering, et de modélisation statistique, implémentées en R.
+
+Ce rapport présente notre démarche, les résultats obtenus et leur interprétation biologique, tout en mettant en avant la pertinence des outils statistiques utilisés.
+
+# Analyse descriptive du jeu de données
+
+```{r Data, eval =T, echo = F}
 Data = read.table("DataProjet.txt", header =T)
-knitr::kable(Data)
 ```
 
-```{r, eval =T, echo = F}
-Data = read.table("DataProjet.txt", header =T)
-```
-Nous allons ensuite afficher la distribution des mesures d'expression des génes pour les différents traitement, réplicat et temps.
-```{r, eval = F}
-options(max.print = 1000)
-summary(Data)
-```
-On trace ensuite les corrélations entre les différentes variables représenté dans la figure 1 : "Corrélation".
+Nous commençons par étudier les corrélations entre les différentes variables.
 
-```{r, eval = T, echo = F, fig.width=3, fig.height=3, fig.align = "center", fig.cap = "Corrélation"}
+```{r Corrplot, eval = T, echo = F, fig.width=4, fig.height=3, fig.align = "center", ,fig.cap="\\label{fig:Correlation}Corrélation entre les différentes variables",fig.pos='H'}
 corrplot(cor(Data), method = "ellipse", tl.cex = 0.6)
 ```
 
-Sur la Figure 1, on remarque la répétition d’un même forme entre le réplicat 1 et 2. On remarque également que dans chacune de ces formes la présence de carrés plus foncés pour chaque corrélation des traitements avec eux-même et pour la corrélation entre le traitement 2 et 3. Pour étudier plus en détaille ce graphique, on va extraire ces parties et expliquer chacune d'entre elles.
-Dans un premier temps, on va extraire la corrélation pour chaque traitement avec eux même et la réprésenter (cf Figure 2)
+La Figure \ref{fig:Correlation} met en évidence la répétition d’un même motif entre les réplicats 1 et 2. On observe une structure en blocs dans la matrice de corrélation. Le bloc situé en haut à gauche met en évidence de fortes corrélations du traitement 1 avec lui-même. De même, les traitements 2 et 3 présentent de fortes corrélations internes, mais aussi entre eux, formant un second bloc distinct.
+Pour une analyse plus détaillée, nous extrairons ces éléments et les examinerons individuellement. Dans un premier temps, nous représenterons la corrélation propre à chaque traitement.
 
-```{r, eval = T, echo = F,fig.width=2, fig.height=2, fig.show='hold', fig.align = "center", results = "asis", fig.cap = "Corrélation pour chaque traitement avec eux même"}
+```{r Corrplot_intratraitement, eval = T, echo = F,fig.width=2, fig.height=2, fig.show='hold', fig.align = "center", results = "asis", fig.cap ="\\label{fig:Correlationintra}corrélation propre à chaque traitement",fig.pos='H'}
 #par(mar = c(5,2,2,2))
 corrplot(cor(Data[,1:6]), method = "ellipse", tl.cex = 0.4, cl.cex = 0.3)
 corrplot(cor(Data[,7:12]), method = "ellipse", tl.cex = 0.4, cl.cex = 0.3)
 corrplot(cor(Data[,13:18]), method = "ellipse", tl.cex = 0.4, cl.cex = 0.3)
 ```
 
-Sur la figure 2, on remarque que les heures ont une influence sur la corrélation. En effet, plus deux heures sont proches, plus la corrélation est élévée, ce qui montre l'évolution temporelle du traitement. Plus le traitement agit longtemps sur le gène, plus le traitement aura un effet important sur le gène.
-Ensuite, on va extraire la corrélation entre chaque traitement (cf Figure 3).
+La figure \ref{fig:Correlationintra} met en évidence l’influence du temps sur la corrélation. Plus deux mesures sont prises à des moments rapprochés, plus leur corrélation est élevée, illustrant ainsi l’évolution progressive de l’effet du traitement. Plus le traitement est appliqué longtemps, plus son impact sur l’expression du gène devient marqué. Nous allons ensuite extraire et analyser la corrélation entre chaque traitement.
 
-```{r,eval = T, echo = F,fig.width=2, fig.height=2,fig.show='hold', fig.align = "center", fig.cap = "Corrélation entre chaque traitement"}
+```{r Correlation_entre_traitement,eval = T, echo = F,fig.width=2, fig.height=2,fig.show='hold', fig.align = "center", fig.cap = "\\label{fig:Correlation_inter}Corrélation entre les traitements",fig.pos='H'}
 corrplot(cor(Data)[1:6,7:12], method = "ellipse", tl.cex = 0.4, cl.cex = 0.3)
 corrplot(cor(Data)[7:12, 13:18], method = "ellipse", tl.cex = 0.4, cl.cex = 0.3)
 corrplot(cor(Data)[13:18, 1:6], method = "ellipse", tl.cex = 0.4, cl.cex = 0.3)
 ```
 
-Sur la Figure 3, on observe que le traitement 2 et 3 sont plutot corrélé, supposant une efficacité similaire des deux traitements. Cependant, le traitement est peu corrélé avec le traitement 2 et 3, ce qui suppose encore une efficacité différente entre ces traitements.
-On extrait également la corrélation en fonction des réplicats (cf Figure 4).
+La Figure \ref{fig:Correlation_inter} montre une corrélation marquée entre les traitements 2 et 3, suggérant une expression similaire. En revanche, le traitement 1 présente une faible corrélation avec les traitements 2 et 3, indiquant une différence d’expression. Nous extrayons également la corrélation en fonction des réplicats pour approfondir cette analyse.
 
-```{r, eval = T, echo = F,fig.width=2, fig.height = 2, fig.show='hold', fig.align = "center", fig.cap = "Corrélation en fonction des réplicats"}
+```{r Correlation_replicat, eval = T, echo = F,fig.width=2, fig.height = 2, fig.show='hold', fig.align = "center", fig.cap = "\\label{fig:CorrelationRep}Corrélation en fonction des réplicats",fig.pos='H'}
 corrplot(cor(Data)[c(19:24), c(1:6)], method = "ellipse", tl.cex = 0.4, cl.cex = 0.3)
 corrplot(cor(Data)[c(25:30), c(7:12)], method = "ellipse", tl.cex = 0.4, cl.cex = 0.3)
 corrplot(cor(Data)[c(31:36), c(13:18)], method = "ellipse", tl.cex = 0.4, cl.cex = 0.3)
 ```
 
-Sur la Figure 4, on peut remarqué une corrélation importante entre les deux réplicat. Ainsi, une expérience produite deux fois renvoit des résultats qui sont corrélés entre eux. Cependant le traitement 2 et 3 pour les 2 réplicat sont plus corrélée à eux même que le traitement 1 ; ce qui suppose que le traitement 2 et 3 a une efficacité plus certaine que le traitement 1. Pour le traitement 2 et 3, on remarque que sur la diagonale (même traitement même heure mais réplicat différent), les corrélations sont proche de 1 mais varie légèrement en fonction des heures, cela met l’accent sur les vitesses de réactions variantes des traitements selon les gènes. 
+D'après la Figure \ref{fig:CorrelationRep}, on observe une forte corrélation entre les deux réplicats, ce qui suggère que le facteur réplicat n’a pas d’influence significative sur l’expression des gènes. Toutefois, les traitements 2 et 3 présentent une corrélation plus élevée entre leurs réplicats que le traitement 1, indiquant une expression plus stable pour ces deux traitements.
 
+Nous  traçons un viloin plot pour visualiser la distribution des données.
 
-```{r, eval = T, echo = F, fig.width=4, fig.height=2,fig.show='hold', fig.align = "center", fig.cap = "Boxplot des données"}
-ggplot(melt(Data), aes(x = variable, y = value)) + geom_boxplot() + labs(title = "Boxplot des données", x = "Variable", y = "Valeur (échelle standardisée)") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
-  theme(plot.title = element_text(size = 9),
-        axis.title.x = element_text(size = 7),
-        axis.title.y = element_text(size = 7),
-        axis.text = element_text(size = 5))
-```
-
-```{r, eval = T, echo = F, fig.show='hold', fig.width=4,fig.height=2, fig.align = "center", fig.cap = "Distribution des Expression par Réplicat"}
+```{r Violin_plot, eval = T, echo = F, fig.width=5,fig.height=4, fig.align = "center", fig.cap = "\\label{fig:violin}Distribution des Expressions par Réplicat, Temps et Traitement",fig.pos='H'}
 # violin plot pour mieux visualiser 
 data_long <- melt(Data, 
                   variable.name = "Condition", 
@@ -145,7 +201,7 @@ data_long$Time <- gsub(".*_(\\d+h)_.*", "\\1", data_long$Condition)
 ggplot(data_long, aes(x = Time, y = Expression, fill = Treatment)) +
   geom_violin(scale = "width", trim = TRUE) +
   facet_wrap(~ Replicate) +  # Facet par réplicat
-  labs(title = "Distribution des Expressions par Réplicat, Temps et Traitement",
+  labs(
        x = "Temps",
        y = "Expression",
        fill = "Traitement") +
@@ -156,14 +212,18 @@ ggplot(data_long, aes(x = Time, y = Expression, fill = Treatment)) +
         axis.text = element_text(size = 5))
 ```
 
-Sur la Figure 5, d’abord, on observe une distinction nette entre les réplicats R1 et R2, témoignant d’une périodicité dans les valeurs d'expression. Ce phénomène s'explique par le fait que les mêmes gènes sont soumis aux mêmes traitements et conditions pour chaque réplicat, bien que des variations aléatoires introduisent de légères différences.
+Sur la Figure \ref{fig:violin}, une distinction claire entre les réplicats R1 et R2 est visible, suggérant une certaine périodicité dans les valeurs d'expression.
 
-Les boxplots révèlent trois groupes distincts correspondant aux traitements T1, T2, et T3.
-- Pour le traitement T1, les médianes sont proches de 0, ce qui suggère une faible réaction des gènes ou l’absence d’un effet global mesurable. Les boîtes étroites et la faible variabilité confirment que la réponse des gènes reste homogène.
-- Sous T2, les médianes s’éloignent nettement de 0, indiquant une réaction progressive des gènes au fil du temps.
-- Étant une combinaison de T1 et T2, T3 présente des profils similaires à ceux de T2. Cela suggère que l’effet du traitement T2 domine dans l’effet global de T3, induisant une réponse notable des gènes. Cependant, il est possible que l’effet de T1 modère légèrement certaines réponses observées sous T3.
+On cosntate trois groupes distincts, correspondant aux traitements T1, T2 et T3 :
 
-Ces observations s’appliquent de manière presque symétrique aux deux réplicats, illustrant leur homogénéité générale.
+- $T1$ présente des valeurs d'expression globalement proches de 0, suggérant une faible expression des gènes.
+
+- $T2$ montre une distribution plus décalée, indiquant une réponse progressive des gènes au fil du temps.
+
+- $T3$, combinaison de T1 et T2, affiche des profils similaires à T2, ce qui suggère que l'effet de T2 domine dans l’expression des gènes sous T3, bien que l’influence de T1 puisse moduler certaines réponses.
+
+Ces tendances sont cohérentes entre les deux réplicats, témoignant de leur homogénéité globale.
+
 
 # Analyse des variables T\_t s\_H R\_r
 
