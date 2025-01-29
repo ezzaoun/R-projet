@@ -23,6 +23,8 @@ header-includes:
 editor_options:
   markdown:
     wrap: 72
+geometry: margin=1in
+fontsize: 10pt
 ---
 
 ```{css,echo=F}
@@ -66,7 +68,6 @@ library(tidyverse)
 library(leaps)
 library(float)
 ```
-
 # Introduction
 
 Ce projet vise à analyser les données d’expression de 2144 gènes d’une plante modèle, mesurées sous trois traitements ($T1$, $T2$, $T3$), six temps ($1h$ à $6h$), et deux réplicats biologiques ($R1$ et $R2$).
@@ -1085,3 +1086,17 @@ La p-valeur obtenue est de 0.7858, ce qui est bien supérieur au seuil de signif
 L'hypothèse d'indépendance entre les traitements T2 et T3 et l'expression des gènes est donc confirmée. Cela signifie qu'il n'y a pas de différence significative dans l'expression des gènes à 6 heures en fonction du traitement (T2 ou T3).
 
 En conclusion, les traitements T2 et T3 n'ont pas d'effet distinct sur l'expression des gènes dans le contexte étudié.
+
+# Conclusion
+
+Ce projet nous a permis d’explorer les données d’expression de 2144 gènes d’une plante modèle à travers différentes méthodes d’analyse statistique et de modélisation. Grâce aux techniques de réduction de dimension, de clustering et de modélisation prédictive, nous avons pu identifier des tendances et des relations significatives entre les traitements, le temps et l’expression des gènes.
+
+L’analyse des clusters a révélé des structures cohérentes entre les différentes méthodes utilisées (\texttt{k-means}, classification hiérarchique et modèles de mélanges gaussiens), tout en mettant en évidence les spécificités de chaque approche.
+
+L’étude des réplicats a montré des différences significatives dans l’expression des gènes, confirmées par les tests statistiques.
+
+Les modèles de prédiction de l’expression des gènes à 6h ont mis en évidence l’importance du temps d’observation, le modèle basé sur l’expression à 3h offrant de meilleures performances que celui utilisant les données à 1h. Enfin, les tests d’indépendance ont permis d’évaluer l’impact des traitements sur l’expression génique et de mieux comprendre les interactions entre les différentes variables étudiées.
+
+Ce travail met ainsi en lumière la complexité des dynamiques d’expression des gènes et la pertinence des outils statistiques pour leur analyse. Des perspectives d’amélioration pourraient inclure l’intégration de modèles non linéaires ou d’approches de machine learning plus avancées afin d’affiner les prédictions et d’explorer d’autres aspects de la régulation génique.
+
+
