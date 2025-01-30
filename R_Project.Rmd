@@ -106,19 +106,21 @@ corrplot(cor(Data)[7:12, 13:18], method = "ellipse", tl.cex = 0.4, cl.cex = 0.3)
 corrplot(cor(Data)[13:18, 1:6], method = "ellipse", tl.cex = 0.4, cl.cex = 0.3)
 ```
 
-La Figure \ref{fig:Correlation_inter} montre une corrélation marquée entre les traitements 2 et 3, suggérant une expression similaire. En revanche, le traitement 1 présente une faible corrélation avec les traitements 2 et 3, indiquant une différence d’expression. Nous extrayons également la corrélation en fonction des réplicats pour approfondir cette analyse.
+La Figure \ref{fig:Correlation_inter} montre une corrélation marquée entre les traitements 2 et 3, suggérant une expression similaire. En revanche, le traitement 1 présente une faible corrélation avec les traitements 2 et 3, indiquant une différence d’expression. 
 
-```{r Correlation_replicat, eval = T, echo = F,fig.width=2, fig.height = 2, fig.show='hold', fig.align = "center", fig.cap = "\\label{fig:CorrelationRep}Corrélation en fonction des réplicats",fig.pos='H'}
+```{r Correlation_replicat, eval = F, echo = F,fig.width=2, fig.height = 2, fig.show='hold', fig.align = "center", fig.cap = "\\label{fig:CorrelationRep}Corrélation en fonction des réplicats",fig.pos='H'}
+#Nous extrayons également la corrélation en fonction des réplicats pour approfondir cette analyse.
 corrplot(cor(Data)[c(19:24), c(1:6)], method = "ellipse", tl.cex = 0.4, cl.cex = 0.3)
 corrplot(cor(Data)[c(25:30), c(7:12)], method = "ellipse", tl.cex = 0.4, cl.cex = 0.3)
 corrplot(cor(Data)[c(31:36), c(13:18)], method = "ellipse", tl.cex = 0.4, cl.cex = 0.3)
+#D'après la Figure \ref{fig:CorrelationRep}, on observe une forte corrélation entre les deux réplicats, ce qui suggère que le facteur #réplicat n’a pas d’influence significative sur l’expression des gènes. Toutefois, les traitements 2 et 3 présentent une corrélation #plus élevée entre leurs réplicats que le traitement 1, indiquant une expression plus stable pour ces deux traitements.
 ```
 
-D'après la Figure \ref{fig:CorrelationRep}, on observe une forte corrélation entre les deux réplicats, ce qui suggère que le facteur réplicat n’a pas d’influence significative sur l’expression des gènes. Toutefois, les traitements 2 et 3 présentent une corrélation plus élevée entre leurs réplicats que le traitement 1, indiquant une expression plus stable pour ces deux traitements.
+
 
 Nous  traçons un viloin plot pour visualiser la distribution des données.
 
-```{r Violin_plot, eval = T, echo = F, fig.width=5,fig.height=4, fig.align = "center", fig.cap = "\\label{fig:violin}Distribution des Expressions par Réplicat, Temps et Traitement",fig.pos='H'}
+```{r Violin_plot, eval = T, echo = F,fig.height=3, fig.align = "center", fig.cap = "\\label{fig:violin}Distribution des Expressions par Réplicat, Temps et Traitement",fig.pos='H'}
 # violin plot pour mieux visualiser 
 data_long <- melt(Data, 
                   variable.name = "Condition", 
@@ -167,7 +169,7 @@ Une Analyse en Composantes Principales (ACP) sera réalisée sur ce jeu de donn�
 
 Dans notre cas, il n'est pas nécessaire de réduire les données, car toutes les variables sont exprimées sur la même échelle.
 
-```{r ACP_variables,echo=F,fig.width=5, fig.height=4,fig.align='center',fig.cap="\\label{fig:AcpVar}Projection des individus",fig.pos='H'}
+```{r ACP_variables,echo=F, fig.height=3,fig.align='center',fig.cap="\\label{fig:AcpVar}Projection des individus",fig.pos='H'}
 # Transposition des données
 transData <- t(Data)
 
@@ -196,11 +198,14 @@ D'après la figure \ref{fig:AcpVar}, on observe :
 
 ## Clustering 
 
-### Choix du nombre de classes 
+### K-means
+Pour cet algorithme, on cherche à minimiser l'\texttt{inertie intraclasse}, qui est définie par : 
+$$
+I_{\text{inter}} = \sum_{k=1}^K |C_k| \times d(m_k, c)^2 \quad \text{où} \quad m_k = \frac{1}{|C_k|} \sum_{i \in C_k} x_i \text{ est le centre de gravité de la classe } C_k.
+$$
+Pour faire cette étude, nous devons avant tout déterminer le nombre de clusters \( K \). Pour cela, nous optons pour le choix du critère \texttt{silhouette} permettant d'évaluer la qualité du clustering en mesurant la cohésion intra-classe et la séparation entre les classes. Le nombre optimal de clusters \( \hat{K} \) est celui qui maximise \( S(K) \). Nous traçons aussi l'inertie intraclasse.
 
-Pour identifier le nombre de classes pour notre clustering, nous allons tracer l'inertie intraclasse, ainsi que la courbe Silhouette en fonction du nombre de classes possibles.
-
-```{r nb_classes, echo=F,fig.width=5, fig.height=4,fig.align='center',fig.cap="\\label{fig:Silh}Sélection du nombre de classes optimal",fig.pos='H'}
+```{r nb_classes, echo=F, fig.height=3,fig.align='center',fig.cap="\\label{fig:Silh}Sélection du nombre de classes optimal",fig.pos='H'}
 set.seed(1234)
 Kmax<-10
 reskmeanscl<-matrix(0,nrow=nrow(transData),ncol=Kmax-1)
@@ -229,8 +234,8 @@ grid.arrange(g1,g2,ncol=2)
 
 D'après la figure \ref{fig:Silh}, on observe un coude marqué à 3 ou 4 classes pour l'inertie intraclasse. Dilhouette indique un nombre optimal de classes égal à 2. Cependant, nous optons pour 4 classes, car la projection des individus obtenue par l'ACP révèle une distinction claire entre 4 groupes, ce qui facilite une interprétation pertinente de chaque classe.
 
-### Kmeans
-```{r kmeans, echo=F,fig.width=5, fig.height=4,fig.align='center',fig.cap="\\label{fig:kmeans}Clustering à 4 classes avec Kmeans",fig.pos='H'}
+
+```{r kmeans, echo=F, fig.height=3,fig.align='center',fig.cap="\\label{fig:kmeans}Clustering à 4 classes avec Kmeans",fig.pos='H'}
 reskmeans<-kmeans(transData,centers = 4)
 fviz_cluster(reskmeans,transData,ellipse.type = "norm",repel=T,labelsize = 7)
 ```
@@ -247,7 +252,15 @@ Sur la figure \ref{fig:kmeans}, on observe :
 
 ### Modèles de mélange 
 
-Pour effectuer un clustering basé sur un modèle de mélanges, nous utilisons les coordonnées issues de l'ACP comme matrice de données pour classer les variables $T_ts_HR_r$. Ce choix est motivé par la taille de la matrice de variance-covariance du jeu de données initial, qui est $p*p=2144*2144$. Une matrice aussi grande serait coûteuse en temps de calcul et ralentirait considérablement la convergence vers le mélange optimal. En utilisant les coordonnées principales, nous réduisons la dimension tout en préservant l'essentiel de l'information.
+Nous nous intéressons ici à la méthode des mélanges gaussiens, basée sur l'hypothèse que les gènes suivent une distribution de probabilité composée de plusieurs distributions gaussiennes : 
+$$
+f(.|\theta_K) = \sum_{k=1}^K \pi_k f_k(.|\alpha_k)
+$$ 
+Pour sélectionner le bon modèle, nous optons pour le critère de sélection \texttt{ICL}, défini par : 
+$$
+\text{crit}(K) = L(x|\hat{\theta}_K) - \frac{\nu_K}{2} \ln(n) - \text{Ent}(K)
+$$
+Nous utilisons les coordonnées issues de l'ACP comme matrice de données pour classer les variables $T_ts_HR_r$. Ce choix est motivé par la taille de la matrice de variance-covariance du jeu de données initial, qui est $p*p=2144*2144$. Une matrice aussi grande serait coûteuse en temps de calcul et ralentirait considérablement la convergence vers le mélange optimal. En utilisant les coordonnées principales, nous réduisons la dimension tout en préservant l'essentiel de l'information.
 
 Nous gardons les 5 premières composantes principales ce qui représente plus de 95% de l’inertie.
 ```{r nb_classes_mel, echo=F}
@@ -257,7 +270,7 @@ summary(resICLall)
 ```
 A partir des resultats observés, on va garder 8 classes de volume variant $(V)$, de même étendu $(E)$ et d'orientation libre $(V)$ puisque l'ICL correspondant est le maximum.
 
-```{r mel,echo=F,fig.width=3, fig.height=3,fig.align='center',fig.cap="\\label{fig:proba_boxplot}Les probabilités d'appartenance",fig.pos='H'}
+```{r mel,echo=F, fig.height=3,fig.align='center',fig.cap="\\label{fig:proba_boxplot}Les probabilités d'appartenance",fig.pos='H'}
 modICL = Mclust(Dataacp, G = 8,modelNames = "VEV")
 Aux = data.frame(label=paste("Cl",modICL$classification,sep=""),proba=apply(modICL$z,1,max))
 ggplot(Aux,aes(x=label,y = proba)) + geom_boxplot()
@@ -269,7 +282,7 @@ table(classes_MEL,classes_kmeans)
 
 Les points sont parfaitement classés, comme en témoigne la figure \ref{fig:proba_boxplot}. Toutes les probabilités d'appartenance sont à 1.
 
-```{r lien,echo=F,fig.width=4, fig.height=3,fig.align='center',fig.cap="\\label{fig:lien_mel_kmeans}Comparaison entre les classifications Kmeans et MEL",fig.pos='H'}
+```{r lien,echo=F,fig.height=3,fig.align='center',fig.cap="\\label{fig:lien_mel_kmeans}Comparaison entre les classifications Kmeans et MEL",fig.pos='H'}
 clust1<-paste("K-k",reskmeans$cluster,sep="")
 clust2<-paste("MEL-k",modICL$classification,sep="")
 
@@ -284,7 +297,7 @@ ggplot(Tab,aes(y=value,axis1=clust1,axis2=clust2))+
 
 La figure \ref{fig:lien_mel_kmeans} montre que les classes générées par le modèle de mélanges sont des sous-classes de celles définies par K-means, sans aucun chevauchement.
 
-```{r mel_ACP,echo=F,fig.width=4, fig.height=3,fig.align='center',fig.cap="\\label{fig:AcpVar_mel}Projection des individus classés par modèles de mélange",fig.pos='H'}
+```{r mel_ACP,echo=F, fig.height=3,fig.align='center',fig.cap="\\label{fig:AcpVar_mel}Projection des individus classés par modèles de mélange",fig.pos='H'}
 fviz_pca_ind(respca,col.ind=as.factor(modICL$classification),repel=T,labelsize = 2)
 ```
 
@@ -309,12 +322,8 @@ Ce graphique met en évidence la formation de deux groupes distincts de gènes, 
 
 ## Clustering K-means 
 
-Tout d'abord, nous utiliserons la méthode \texttt{k-means} pour étudier le clustering des individus. Pour cet algorithme, on cherche à minimiser l'\texttt{inertie intraclasse}, qui est définie par : 
-$$
-I_{\text{inter}} = \sum_{k=1}^K |C_k| \times d(m_k, c)^2 \quad \text{où} \quad m_k = \frac{1}{|C_k|} \sum_{i \in C_k} x_i \text{ est le centre de gravité de la classe } C_k.
-$$
-Pour faire cette étude, nous devons avant tout déterminer le nombre de clusters \( K \). Pour cela, nous optons pour le choix du critère \texttt{silhouette} permettant d'évaluer la qualité du clustering en mesurant la cohésion intra-classe et la séparation entre les classes.
-Le nombre optimal de clusters \( \hat{K} \) est celui qui maximise \( S(K) \).
+Tout d'abord, nous utiliserons la méthode \texttt{k-means} pour étudier le clustering des individus. 
+
 La figure \ref{fig:inertie_silhou} permet de déterminer le nombre optimal de clusters en analysant l'évolution de l'inertie intra-classe et en utilisant le critère silhouette pour évaluer la qualité du clustering.
 
 ```{r, fig.pos='H', fig.align='center', echo=FALSE,fig.height=3,fig.cap="\\label{fig:inertie_silhou}Évolution de l'inertie intra-classe et du critère silhouette"}
@@ -418,17 +427,7 @@ fviz_pca_ind(pca_res_ind, geom = c("point"), habillage = as.factor(Class))
 ```
 
 ## Mélange gaussien
-
-Nous nous intéressons ici à la méthode des mélanges gaussiens, basée sur l'hypothèse que les gènes suivent une distribution de probabilité composée de plusieurs distributions gaussiennes : 
-$$
-f(.|\theta_K) = \sum_{k=1}^K \pi_k f_k(.|\alpha_k)
-$$ 
-Pour sélectionner le bon modèle, nous optons pour le critère de sélection \texttt{ICL}, défini par : 
-$$
-\text{crit}(K) = L(x|\hat{\theta}_K) - \frac{\nu_K}{2} \ln(n) - \text{Ent}(K)
-$$
 Comme on sait que l'expression des gènes est dépendante, on peut d'ores et déjà retenir que les modèles permettant des degrés variés de liberté sont les plus adaptés. On en déduit que seuls les modèles suivants sont retenus (\texttt{modelNames}) :
-
 
 ```{r, fig.pos='H', fig.align='center', echo=TRUE, eval=FALSE}
 mg_res <- mclustICL(Data, G=2:20, modelNames = c("EVE", "EEV", "EVV", "VEV", "VVV"))
@@ -680,7 +679,7 @@ summary(ML_no_inter)$coefficients
 
 Avant de procéder au test de sous-modèle pour déterminer si le modèle avec interaction doit être conservé, nous comparons les valeurs prédites des deux modèles en les visualisant graphiquement.
 
-```{r courbe_inter,echo=F,fig.width=5, fig.height=4,fig.align='center',fig.cap="\\label{fig:interaction}Interaction plot",fig.pos='H'}
+```{r courbe_inter,echo=F, fig.height=3,fig.align='center',fig.cap="\\label{fig:interaction}Interaction plot",fig.pos='H'}
 # Modèle sans interaction
 M_non_interaction <- lm(Y ~ traitement + temps, data = matrix)
 
@@ -780,7 +779,7 @@ summary(M_1h_to_6h)
 
 Nous traçons deux graphes qui nous aideront à déterminer la qualité de l'ajustement du modèle :
 
-```{r observed_fitted_plot, echo=F,fig.width=7, fig.height=4,fig.align='center',fig.cap="\\label{fig:obsVSpred1}Repésentation de la qualité du modèle",fig.pos='H'}
+```{r observed_fitted_plot,echo=F,fig.height=3,fig.align='center',fig.cap="\\label{fig:obsVSpred1}Repésentation de la qualité du modèle",fig.pos='H'}
 # Prédictions à partir du modèle
 matrixMoy$Predicted <- predict(M_1h_to_6h, newdata = matrixMoy)
 
@@ -825,7 +824,6 @@ Le modèle ajusté montre une qualité d'ajustement modérée, avec un R² de 27
 En se basant sur les graphiques obtenus, le modèle que nous utilisons actuellement ne semble pas être le plus adapté à nos données. Des ajustements sont nécessaires pour obtenir des résultats plus fiables.
 
 ## A partir de l'expressions des gènes à 3h
-
 Nous souhaitons prédire $Y_{6hMoy}$ en utilisant $Y_{3hMoy}$. Pour ce faire, nous allons reprendre le modèle précédent et l'adapter en remplaçant toutes les variables correspondant aux données au temps $1h$ par leurs équivalents au temps $3h$. 
 ```{r Ancova_6h_3h,echo=F}
 p = ncol(Data)
@@ -845,8 +843,6 @@ matrixMoy2$Y_moy_6h <- as.numeric(matrixMoy2$Y_moy_6h)
 matrixMoy2$Y_moy_3h <- as.numeric(matrixMoy2$Y_moy_3h)
 
 ```
-
-
 ```{r Model_6h_3h, echo=F}
 M_3h_to_6h <- lm(Y_moy_6h~Y_moy_3h*traitement, data = matrixMoy2)
 summary(M_3h_to_6h)
@@ -856,7 +852,7 @@ Le modèle basé sur les données de 3h semble être plus performant que celui d
 
 On trace la courbe des valeurs observées par rapport aux valeurs prédites, ainsi que les résidus par rapport aux valeurs prédites.
 
-```{r observed_fitted,echo=F,fig.width=7,fig.height=4,fig.align='center',fig.cap="\\label{fig:obsVSpred2}Repésentation de la qualité du modèle",fig.pos='H'}
+```{r observed_fitted,echo=F,fig.height=3,fig.align='center',fig.cap="\\label{fig:obsVSpred2}Repésentation de la qualité du modèle",fig.pos='H'}
 # Prédictions à partir du modèle
 matrixMoy2$Predicted <- predict(M_3h_to_6h, newdata = matrixMoy2)
 
@@ -894,9 +890,9 @@ A partir de la figure \ref{fig:obsVSpred2} on observe que les valeurs prédites 
 # Etude de l’expression des gènes pour le traitement T3 à 6h :
 ## Les variables prédictives pour le traitement T3 à 6h parmi les différents temps observés pour les traitements T1 et T2
 
-On va réaliser une regression linéaire pour prédire les gènes du traitement 3 à 6h en fonction des gènes des autres traitements à toutes les heures.  
+Nous allons réaliser une regression linéaire pour prédire les gènes du traitement 3 à 6h en fonction des gènes des autres traitements à toutes les heures.  
 
-```{r MLG, eval = T, echo=T, fig.cap="Modèle de regression linéaire complet"}
+```{r Reg, echo = F , fig.cap="Modèle de regression linéaire complet"}
 # Matrice moyenne des replicats
 p = ncol(Data)
 Moy_Rep = (Data[,1:(p/2)] + Data[,((p/2) + 1):p])/2
@@ -908,15 +904,15 @@ modele_T3_all <- lm(T3_6h ~ T1_1h + T1_2h + T1_3h + T1_4h + T1_5h + T1_6h +
 summary(modele_T3_all)
 ```
 
-On remarque dans cette sortie, que la p-valeur pour le modèle constant est < 2.2e-16; on rejette le modèle constant. On se demande maintenant quelle est la meilleur modèlisation de ce modèle. Pour selectionner le modèle parcimonieux, on décide d'utiliser le critère de Mallows avec un méthode backward. On cherche à minimiser ce critère.
+On remarque dans cette sortie, que la p-valeur pour le modèle constant est < 2.2e-16, on rejette le modèle constant. On se demande maintenant quelle est la meilleur modèle qu'on puisse établir. Pour selectionner le modèle parcimonieux, on décide d'utiliser le critère de Mallows avec une méthode backward. On cherche à minimiser ce critère.
 
-```{r Selection, fig.width=5, fig.height=4, echo=F, fig.show='hold', fig.align = "center", fig.cap = "\\label{fig:critereMallows}Critère de Mallows"}
+```{r Selection, fig.height=4,echo=F, fig.align = "center", fig.cap = "\\label{fig:critereMallows}Critère de Mallows",fig.pos='H'}
 choix = regsubsets(T3_6h~T1_1h + T1_2h + T1_3h + T1_4h + T1_5h + T1_6h +
                       T2_1h + T2_2h + T2_3h + T2_4h + T2_5h + T2_6h,data=Moy_Rep,nbest=1,nvmax=11,method="backward")
 plot(choix,scale="Cp")
 ```
 
-Sur la Figure \ref{fig:critereMallows}, on remarque le critère $c_p$ selectionne toutes les variables sauf T1_5h et T2_1h. On décide de tester ce sous-modèle en le comparant au modèle de regression linéaire complété implémenté précédemment. 
+Sur la Figure \ref{fig:critereMallows}, on remarque le critère $Cp$ selectionne toutes les variables sauf T1_5h et T2_1h. On décide de tester ce sous-modèle en le comparant au modèle de regression linéaire complété implémenté précédemment. 
 
 ```{r Selection2, echo=F, fig.show='hold', fig.align = "center", fig.cap = " "}
 new_modele_T3_all <- lm(T3_6h ~ T1_1h + T1_2h + T1_3h + T1_4h + T1_6h +
@@ -925,12 +921,12 @@ new_modele_T3_all <- lm(T3_6h ~ T1_1h + T1_2h + T1_3h + T1_4h + T1_6h +
 anova(new_modele_T3_all,modele_T3_all)
 ```
 
-Pour l'analyse de variable entre les 2 modèles, on obtient une p-valeur = 0.8284 > 0.05, on accepte donc largement le nouveau modèle. 
+Pour l'analyse de variable entre les 2 modèles, on obtient une p-valeur = 0.8284 > 0.05, on accepte donc le sous-modèle. 
 
-On souhaîte maintenant vérifier si notre nouveau modèle permet de bien exprimer les valeurs observées (gènes).
+On souhaîte maintenant vérifier si notre nouveau modèle permet de bien prédire les expression des gènes à 6h.
 
 
-```{r predict, echo = F, fig.width=3,fig.height=2, fig.cap="\\label{fig:comp_vop}Comparaison valeurs observées et prédites"}
+```{r predict, echo = F, fig.width=3,fig.height=2, fig.cap="\\label{fig:comp_vop}Comparaison valeurs observées et prédites",fig.pos='H'}
 tmp = Moy_Rep
 tmp$Predicted <- predict(new_modele_T3_all, newdata = tmp)
 ggplot(tmp, aes(x = Predicted, y = T3_6h)) +
@@ -942,19 +938,40 @@ ggplot(tmp, aes(x = Predicted, y = T3_6h)) +
     y = "Valeurs observées"
   ) +
   theme_minimal()
+new_fitted_vals <- fitted(new_modele_T3_all)
+new_residuals <- resid(new_modele_T3_all)
+ggplot(data = data.frame(Fitted = new_fitted_vals, Residuals = new_residuals), aes(x = Fitted, y = Residuals)) +
+  geom_point(color = "blue", alpha = 0.6) + # Points des résidus
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") + # Ligne à y = 0
+  theme_minimal() + # Thème esthétique minimal
+  labs(
+    title = "Residuals vs Fitted Values",
+    x = "Fitted Values",
+    y = "Residuals"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14),
+    axis.title = element_text(size = 12)
+  )
 ```
 
 
-Sur la figure \ref{fig:comp_vop}, on compare une fonction affine de pente 1 et d'origine nulle aux valeurs observées en fonction des valeurs prédites. Cela permet de vérifier si on a bien prédit les valeurs; plus les points sont alignés à la droit, mieux est notre prédictions. On remarque ici que les points sont proches de cette droite, on peut donc en conclure que notre modèle à bien prédit les valeurs. 
+Sur la figure \ref{fig:comp_vop}, on observe une répartition linéaire des points suivant la droite $y=x$, indiquant une forte concordance entre les valeurs prédites et observées. Cela suggère que notre modèle prédit efficacement l’expression des gènes à 6h.
 
 ## Prédiction des gènes sur-exprimés et des gènes sous-exprimés à 6h pour le traitement 3 à partir des traitements T1 et T2 et les heures 1 à 3 pour ces mêmes gènes
+Nous allons utiliser un modèle linéaire généralisé pour prédire l’expression des gènes, car la variable cible est binaire : un gène peut être soit sous-exprimé ($Y=0$), soit sur-exprimé ($Y=1$). Pour cela, nous appliquons une régression logistique en choisissant la fonction de lien logit, qui est définie comme suit :
+$$
+\text{logit}(p) = \log \left( \frac{p}{1 - p} \right)
+$$
+où $p$ représente la probabilité qu’un gène soit sur-exprimé.
 
-Nous avons tenter d'exprimer les gènes sur-exprimés (codés 1) et les gènes sous-exprimés (codés 0) à 6h pour le traitement T3 à partir des observations pour les traitements T1 et T2 et les heures 1 à 3 pour ces mêmes gènes. Pour cela, on va réaliser un modèle linéaire généralisé car les variables que l'on souhaîte prédire sont de type binaire; on choisit ainsi une fonction de lien logit pour effectuer une regression logistique. 
+L’équation de notre modèle est donc la suivante :
+$$
+\log \left( \frac{P(Y_{6hMoy} = 1)}{1 - P(Y_{6hMoy} = 1)} \right) = \beta_0 + \beta_1 Y_{T1,1h} + \beta_2 Y_{T1,2h} + \beta_3 Y_{T1,3h} + \beta_4 Y_{T2,1h} + \beta_5 Y_{T2,2h} + \beta_6 Y_{T2,3h}
+$$
+où $Y_{Tt,sh}$ représente l’expression du gène sous le traitement $Tt$ à l’instant $sh$.
 
-Dans un premier temps, on prédit les gènes sur-exprimés et sous-esprimés et on affiche le nombre de gène identifié comme sous-exprimée(codés 0) et sur-exprmiée (codés 1) : 
-
-
-```{r, echo=F}
+```{r MLG, echo=F}
 # Filtrer les données en excluant les valeurs intermédiaires (-1 <= T3_6h <= 1)
 x = Moy_Rep[Moy_Rep$T3_6h < 1 & Moy_Rep$T3_6h > -1, ]
 # 8 genes non classés
@@ -962,15 +979,10 @@ filtered_data <- Moy_Rep[Moy_Rep$T3_6h < -1 | Moy_Rep$T3_6h > 1, ]
 # Définir la colonne target selon les critères donnés
 filtered_data$target <- as.factor(ifelse(filtered_data$T3_6h > 1, 1, 0))
 filtered_data <- filtered_data[, c("T1_1h", "T1_2h", "T1_3h", "T2_1h", "T2_2h", "T2_3h","target")]
-
-table(filtered_data$target)
 ```
 
-On essayer ensuite de générer ce résultat à partir du modèle complet de régression logistique.
-
-```{r, echo=F}
+```{r MLG_model, echo=F}
 model <- glm(filtered_data$target ~. , data = filtered_data, family = "binomial")
-
 summary(model)
 ```
 
@@ -987,9 +999,13 @@ bestmodel = glm(filtered_data$target ~T2_2h + T1_2h +T1_3h + T2_3h , data = filt
 anova(bestmodel,model)
 ```
 
-On obtient ici une p-valeur = 0.785 > 0.05, on accepte donc le modèle. 
+On obtient ici une p-valeur = 0.785 > 0.05, on accepte donc sous modèle.
 
-```{r Roc,echo=F, eval=F,fig.width=7,fig.height=4,fig.align='center',fig.cap="\\label{fig:Roc}courbe Roc"}
+Nous évaluons la performance de notre modèle de régression logistique en utilisant une courbe ROC (Receiver Operating Characteristic). Cette courbe permet d’analyser la capacité du modèle à distinguer correctement les classes en traçant le taux de vrais positifs contre le taux de faux positifs pour différents seuils de classification.
+
+L’aire sous la courbe ROC (AUC) permet de quantifier la performance globale du modèle : plus l’AUC est proche de 1, meilleure est la capacité de discrimination du modèle.
+
+```{r Roc,echo=F,fig.height=3,fig.align='center',fig.cap="\\label{fig:Roc}Courbe ROC",fig.pos='H'}
 l<-1000
 # pour ne pas prendre des données rangées pour le test (qui viennent apres ceux d'apprentissage)
 perm<-sample(nrow(filtered_data))
@@ -1004,32 +1020,17 @@ prev<-predict(modelapp,newdata=dtest,type="response")
 
 
 # Prédire sur les données de test ou validation
-predictions <- predict(model, newdata = filtered_data, type = "response")
+predictions <- predict(modelapp, newdata=dtest, type="response")
 
 # Convertir les prédictions en classes (0 ou 1) en fonction d'un seuil de 0.5
 predicted_class <- ifelse(predictions > 0.5, 1, 0)
-```
-
-```{r Roc2,echo=F,eval=F,fig.width=7,fig.height=4,fig.align='center',fig.cap="\\label{fig:Roc2}courbe Roc"}
-# Matrice de confusion
-table(predicted_class, filtered_data$target)
-adjustedRandIndex(predicted_class, filtered_data$target)
 
 roc_curve1 <- roc(dtest$target, prev)
 plot(roc_curve1,col = "blue", lwd = 2)
 auc_value <- auc(roc_curve1)
 print(paste("AUC:", auc_value))
 ```
-
-
-
-```{r, echo=F, eval=FALSE}
-model_inter <- glm(filtered_data$target ~(.)^2 , data = filtered_data, family = "binomial")
-summary(model_inter)
-
-modelbestinter = step(model_inter,trace=F)
-modelbestinter
-```
+D'après la figure \ref{fig:Roc}, la est très proche du coin supérieur gauche du graphique, ce qui indique une excellente capacité de discrimination du modèle. le critère AUC est égal à 0.9947, ce qui est très proche de 1. On conlut que notre modèle est performant pour prédire les gènes sur-exprimés et sous-exprimés à 6h.
 
 # Test d'indépendance
 ## Pour tous les traitements
@@ -1098,5 +1099,4 @@ L’étude des réplicats a montré des différences significatives dans l’exp
 Les modèles de prédiction de l’expression des gènes à 6h ont mis en évidence l’importance du temps d’observation, le modèle basé sur l’expression à 3h offrant de meilleures performances que celui utilisant les données à 1h. Enfin, les tests d’indépendance ont permis d’évaluer l’impact des traitements sur l’expression génique et de mieux comprendre les interactions entre les différentes variables étudiées.
 
 Ce travail met ainsi en lumière la complexité des dynamiques d’expression des gènes et la pertinence des outils statistiques pour leur analyse. Des perspectives d’amélioration pourraient inclure l’intégration de modèles non linéaires ou d’approches de machine learning plus avancées afin d’affiner les prédictions et d’explorer d’autres aspects de la régulation génique.
-
 
