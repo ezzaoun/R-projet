@@ -70,7 +70,7 @@ library(leaps)
 library(float)
 ```
 
-**Quand vous voyez ce signe (\*), la sortie est disponible sur le Rmarkdown.**
+**Lorsque ce symbole (\*) apparaît, la sortie est accessible dans le RMarkdown.**
 
 # Introduction
 
