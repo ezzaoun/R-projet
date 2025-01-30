@@ -478,7 +478,7 @@ ggplot(Tab, aes(y = value, axis1 = clust1, axis2 = clust2, axis3 = clust3)) +
   theme(legend.position = "none")
 ```
 
-La première observation marquante est le flux important partant du cluster 1 des \texttt{k-means} vers le cluster 1 de la classification hiérarchique, et se terminant dans les clusters 1, 2 et 4 du mélange gaussien. Les classes obtenues via la classification hiérarchique sont une agrégation des classes de \texttt{k-means}. On en déduit qu'elles sont concordantes.  
+La première observation marquante est le flux important partant du cluster 1 des \texttt{k-means} vers le cluster 1 de la \texttt{classification hiérarchique}, et se terminant dans les clusters 1, 2 et 4 du \texttt{mélange gaussien}. Les classes obtenues via la \texttt{classification hiérarchique} sont une agrégation des classes de \texttt{k-means}. On en déduit qu'elles sont concordantes.  
 
 
 ### MCA sur les différentes méthodes :
@@ -535,7 +535,7 @@ g2 <- fviz_mca_var(resMCA, choice = "mca.cor",
 grid.arrange(g1, g2, ncol=2, widths=c(2,1))
 ```
 
-La première dimension de la figure \ref{fig:mca_ind} est associée aux trois méthodes, tandis que la deuxième dimension semble être principalement influencée par \texttt{k-means} et le mélange gaussien. Les proximités observées entre les modalités sur le plan révèlent une forte association entre elles. Par exemple, on constate que le cluster 1 obtenu par \texttt{k-means} et le cluster 1 de la méthode hiérarchique sont très proches, ce qui suggère que plusieurs gènes classés dans le cluster 1 de \texttt{k-means} se retrouvent également dans le cluster 1 de la méthode hiérarchique. Cette observation confirme la comparaison réalisée à l'aide du diagramme d'alluvions.
+La première dimension de la figure \ref{fig:mca_ind} est associée aux trois méthodes, tandis que la deuxième dimension semble être principalement influencée par \texttt{k-means} et le \texttt{mélange gaussien}. Les proximités observées entre les modalités sur le plan révèlent une forte association entre elles. Par exemple, on constate que le cluster 1 obtenu par \texttt{k-means} et le cluster 1 de la méthode \texttt{hiérarchique} sont très proches, ce qui suggère que plusieurs gènes classés dans le cluster 1 de \texttt{k-means} se retrouvent également dans le cluster 1 de la méthode \texttt{hiérarchique}. Cette observation confirme la comparaison réalisée à l'aide du diagramme d'alluvions.
 
 # Etude des différences entre les deux réplicats
 
