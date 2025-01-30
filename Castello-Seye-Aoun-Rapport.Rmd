@@ -483,7 +483,7 @@ La première observation marquante est le flux important partant du cluster 1 de
 
 ### MCA sur les différentes méthodes :
 
-Une autre méthode de comparaison consiste à créer un tableau disjonctif complet qui présente, pour chaque gène, les clusters obtenus selon les trois méthodes de clustering : \texttt{k-means}, classification hiérarchique et mélanges gaussiens.
+Une autre méthode de comparaison consiste à créer un tableau disjonctif complet qui présente, pour chaque gène, les clusters obtenus selon les trois méthodes de clustering : \texttt{k-means}, \texttt{classification hiérarchique} et \texttt{mélanges gaussiens}.
 
 
 ```{r, fig.pos='H', fig.align='center', fig.height=3, echo=FALSE, eval=FALSE, include=FALSE}
