@@ -433,7 +433,7 @@ fviz_pca_ind(pca_res_ind, geom = c("point"), habillage = as.factor(Class))
 ```
 
 ## Mélange gaussien
-Comme on sait que l'expression des gènes est dépendante, on peut d'ores et déjà retenir que les modèles permettant des degrés variés de liberté sont les plus adaptés. On en déduit que seuls les modèles suivants sont retenus (\texttt{modelNames}) :
+Étant donné que l'expression des gènes varie en fonction du traitement et du temps, il est pertinent d'opter pour des modèles offrant des degrés de liberté variés. Ainsi, seuls les modèles suivants ont été retenus (\texttt{modelNames}) :
 
 ```{r, fig.pos='H', fig.align='center', echo=TRUE, eval=FALSE}
 mg_res <- mclustICL(Data, G=2:20, modelNames = c("EVE", "EEV", "EVV", "VEV", "VVV"))
