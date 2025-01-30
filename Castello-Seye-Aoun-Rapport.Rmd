@@ -392,9 +392,11 @@ Dans cette partie, nous allons mettre en place une classification hiérarchique 
 $$
 d(x_i, x_\ell) = \|x_i - x_\ell\|_2 = \sqrt{\sum_{j=1}^p (x_{ij} - x_{\ell j})^2}
 $$ 
-Pour l'agrégation des clusters, nous optons pour la mesure d'agrégation de Ward, donnée par : 
+Pour l'agrégation des clusters, nous optons pour la \texttt{mesure d’agrégation de Ward}, donnée par : 
 $$
-D(C_k, C_{k'}) = \frac{|C_k| \, |C_{k'}|}{|C_k| + |C_{k'}|} \, d(m_k, m_{k'})^2 \quad \text{où} \quad m_k \, (\text{resp. } m_{k'}) \text{ est le centre de gravité de } C_k \, (\text{resp. } C_{k'})
+D(C_k, C_{k'}) = \frac{|C_k| \, |C_{k'}|}{|C_k| + |C_{k'}|} \, d(m_k, m_{k'})^2
+\quad \text{où} \quad m_k \, (\text{resp. } m_{k'}) \text{ est le centre de gravité de } 
+C_k \, (\text{resp. } C_{k'})
 $$
 Pour déterminer le nombre de clusters, nous introduisons le critère \texttt{Calinski-Harabasz} donné par : 
 $$
@@ -404,9 +406,9 @@ $$
 La figure \ref{fig:deno_ind} ci-dessous représente le clustering hiérarchique, permettant de créer un dendrogramme et de déterminer les clusters en coupant l'arbre à un niveau spécifique.
 
 
-```{r, fig.pos='H', fig.align='center', fig.cap="\\label{fig:deno_ind}Evolution du critère CH et Dendrogramme avec 2 clusters", fig.height=3, echo=FALSE}
+```{r, fig.pos='H', fig.align='center', fig.cap="\\label{fig:deno_ind}Evolution du critère CH et Dendrogramme", fig.height=3, echo=FALSE}
 library(ggdendro)
-hclust_res <- hclust(dist(Data, method = "euclidean"))
+hclust_res <- hclust(dist(Data, method = "euclidean"), method = "ward.D2")
 dendro_data <- dendro_data(hclust_res)
 g2 <- ggplot(segment(dendro_data)) +
   geom_segment(aes(x = x, y = y, xend = xend, yend = yend)) +
